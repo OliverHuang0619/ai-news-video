@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI News Video"
+  short_description: "Create AI news videos from aixiaoerke.com using HyperFrames"
+  default_prompt: "Create an AI news briefing video from the latest stories on aixiaoerke.com"
