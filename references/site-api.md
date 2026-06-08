@@ -46,6 +46,22 @@ Fetch paginated AI news articles.
 }
 ```
 
+### GET /api/news/:id
+
+Fetch a single article by its ID.
+
+**Path parameters:**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `id` | int | Article ID (returned in list response) |
+
+**Response:** Same object structure as individual list items. The `summary` field contains the full article body (usually 300-800+ Chinese characters).
+
+**Notes:**
+- The `summary` field in the detail response IS the full article text — not a shortened excerpt. Use this for deep-dive content extraction (see `fetch-detail.mjs`).
+- There is no separate "full body" endpoint; `/api/news/:id` returns the complete source text in the `summary` field.
+
 ## Field Descriptions
 
 | Field | Type | Description |
@@ -53,7 +69,7 @@ Fetch paginated AI news articles.
 | `id` | int | Unique article ID |
 | `title` | string | Chinese news headline |
 | `publish_time` | ISO 8601 | Publication timestamp |
-| `summary` | string | Article abstract (100-500 zh chars) |
+| `summary` | string | Full article body (300-800+ Chinese chars) |
 | `category` | string | Category slug (e.g. `"industry"`, `"product"`) |
 | `source` | string | Original article URL |
 | `cover_image` | string\|null | Optional cover image URL |
@@ -62,7 +78,14 @@ Fetch paginated AI news articles.
 
 ## Notes
 
-- Summary is in Chinese, typically 100-500 characters.
+- Summary is in Chinese, typically 300-800+ characters (not just an excerpt).
 - Articles are ordered by `publish_time` descending (newest first).
 - `cover_image` may be null — many articles have no image.
 - The frontend is a client-rendered SPA; the API is the cleanest way to get article data.
+
+## Related Scripts
+
+- `scripts/fetch-news.mjs` — fetch and format news list as markdown
+- `scripts/fetch-detail.mjs` — fetch full detail for individual articles by ID
+- `scripts/extract-key-points.mjs` — structure article content for 3-key-point extraction
+- `scripts/srt-to-captions.mjs` — generate caption overlay from edge-tts SRT

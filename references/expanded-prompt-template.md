@@ -4,6 +4,12 @@
 
 Write output to `.hyperframes/expanded-prompt.md` in the project.
 
+Read:
+- `design.md` (or design-template.md defaults)
+- `key-points.md` (the 3 key points per article)
+- [news-video-patterns.md](news-video-patterns.md) — pick scene type per news item
+- [workflow.md](workflow.md)
+
 ## Template
 
 ```markdown
@@ -11,13 +17,29 @@ Write output to `.hyperframes/expanded-prompt.md` in the project.
 
 ## Identity
 - Source: design.md (or design-template.md defaults)
-- Rhythm: hook – 快讯×N – 收尾
+- Rhythm: hook – 快讯×N (each with 3 key points) – 收尾
 - Total target duration: ~Xs (from SRT)
 
 ## Palette (from design.md — do not change)
 - Background: #0a0a1a
 - Accent: #00d4ff / #7c3aed
 - Caption active: #00d4ff
+
+## Key Points Data (from key-points.md)
+
+### [News 1 — headline]
+- KP1 (Core Fact): [extracted point]
+- KP2 (Key Data): [extracted point]
+- KP3 (Significance): [extracted point]
+- Video scene: Key Points Card | Stat Card | Headline+Summary (pick one)
+
+### [News 2 — headline]
+- KP1: ...
+- KP2: ...
+- KP3: ...
+- Video scene: ...
+
+(repeat for each news item)
 
 ## Scene Map
 
@@ -29,17 +51,19 @@ Write output to `.hyperframes/expanded-prompt.md` in the project.
 - **Transition out:** crossfade 0.4s → S2
 
 ### S2 — [News headline 1] (~Xs)
-- **Type:** Headline + Summary | Stat Card (pick one — see news-video-patterns.md)
+- **Type:** Key Points Card (default) | Headline+Summary | Stat Card
 - **Category badge:** [行业动态 / 融资 / 产品发布 / ...]
 - **Glow hue:** cyan
-- **Emphasis spans:** [brand names, numbers]
-- **Layers:** deco-grid → glow → badge pop → headline → summary
-- **Verbs:** back.out badge, power3.out headline, power2.out summary
-- **Transition out:** slide left 0.5s expo.inOut → S3
+- **3 Key Points animation:** KP1 slide-in at SRT[t1], KP2 at SRT[t2], KP3 at SRT[t3]
+- **Emphasis spans:** [brand names, numbers from key points]
+- **Layers:** deco-grid → glow → badge pop → headline → KP1 → KP2 → KP3
+- **Verbs:** back.out badge, power3.out headline, power2.out each KP (stagger by SRT)
+- **Transition out:** crossfade 0.35s → S3
 
 ### S3 — [News headline 2] (~Xs)
-- **Type:** ...
+- **Type:** ... (Key Points Card or Stat Card)
 - **Glow hue:** purple
+- **3 Key Points:** KP1 at SRT[t1], KP2 at SRT[t2], KP3 at SRT[t3]
 - ...
 
 (repeat for each news item)
@@ -53,13 +77,13 @@ Write output to `.hyperframes/expanded-prompt.md` in the project.
 ## Caption Plan
 - Overlay: karaoke medium-high on track 2
 - Group size: 3–5 words / ~4–6 Chinese chars
-- Emphasis: [list brand names and stats from script]
+- Emphasis: [list brand names and stats from key points]
 
 ## Transition Choreography
 | Cut | Type | Duration |
 |-----|------|----------|
 | S1→S2 | crossfade | 0.4s |
-| S2→S3 … | slide left | 0.5s |
+| S2→S3 … | crossfade | 0.35s |
 | S(N-1)→SN | fade to dark | 0.6s |
 ```
 
@@ -70,9 +94,9 @@ Read [news-video-patterns.md](news-video-patterns.md). Pick per item:
 | Content signal | Scene type | Hero element |
 |----------------|------------|--------------|
 | Has key number (融资, %, 参数量) | Number/Stat Card | 140px stat + label |
-| Product launch / partnership | Headline + Summary | badge + headline + summary |
-| Policy / industry trend | Headline Card | 72px headline only |
+| Product launch / partnership | Key Points Card (default) | headline + 3 animated bullets |
+| Policy / industry trend | Key Points Card | headline + 3 KPs |
 | Opening | Title Card | channel + date + title |
 | Ending | Closing Card | CTA + channel name |
 
-Do not use the same scene type for every news item — vary between Headline+Summary and Stat Card when data allows.
+**Use Key Points Card as default for most news items.** Switch to Stat Card only when a single number dominates the article. Vary scene types across items — at least one Stat Card if data allows.

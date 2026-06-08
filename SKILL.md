@@ -1,23 +1,25 @@
 ---
 name: ai-news-video
-description: "Create AI news videos from aixiaoerke.com/news using HyperFrames. Use when asked to: (1) turn AI news articles into a video, (2) create a daily/weekly AI news briefing, (3) build a video summary of latest industry stories, (4) generate a narrated video from news headlines. Supports the full workflow: fetching news from the API, selecting articles, generating a narration script, setting up design, expanding prompts, building GSAP-animated compositions with scene transitions, karaoke captions synced to TTS, adding voiceover narration, validating, and rendering."
+description: "Create AI news videos from aixiaoerke.com/news using HyperFrames. Use when asked to: (1) turn AI news articles into a video, (2) create a daily/weekly AI news briefing, (3) build a video summary of latest industry stories, (4) generate a narrated video from news headlines. Supports the full workflow: fetching news from the API, fetching per-article detail, extracting 3 key points per article, generating a narration script, setting up design, expanding prompts, building GSAP-animated compositions with scene transitions, karaoke captions synced to TTS, adding voiceover narration, validating, and rendering."
 ---
 
 # AI News Video
 
-Turn AI news articles from aixiaoerke.com into short videos using HyperFrames. Supports the full pipeline: fetching news, scripting, design system, prompt expansion, GSAP motion graphics with transitions, karaoke captions, voiceover, validation, and rendering.
+Turn AI news articles from aixiaoerke.com into short videos using HyperFrames. Supports the full pipeline: fetching news, deep-dive content extraction, 3-key-point analysis, scripting, design system, prompt expansion, GSAP motion graphics with transitions, karaoke captions, voiceover, validation, and rendering.
 
 ## Quick Start
 
 1. **Fetch news:** `node scripts/fetch-news.mjs --size 10`
-2. **Select** 3-10 articles and write a narration script
-3. **Establish design:** copy [design-template.md](references/design-template.md) → `design.md`
-4. **Expand prompt:** write `.hyperframes/expanded-prompt.md` (see [expanded-prompt-template.md](references/expanded-prompt-template.md))
-5. **Generate audio** using `edge-tts` with `zh-CN-YunxiNeural`
-6. **Parse SRT** for scene timing + caption groups
-7. **Build composition** — scenes on track 1, karaoke captions on track 2, audio on track 3
-8. **Validate:** `npx hyperframes lint && npx hyperframes validate && npx hyperframes inspect --samples 10`
-9. **Render:** `npx hyperframes render --output output.mp4`
+2. **Fetch detail for selected articles:** `node scripts/fetch-detail.mjs --ids ID,ID,ID --output .hyperframes/article-details.md`
+3. **Extract 3 key points per article:** read `.hyperframes/article-details.md`, analyze each article's full content, and fill in the 3 key points (see [Phase 1.5](#15-content-deep-view--key-points-extraction))
+4. **Write a narration script:** each news item covers its 3 key points
+5. **Establish design:** copy [design-template.md](references/design-template.md) → `design.md`
+6. **Expand prompt:** write `.hyperframes/expanded-prompt.md` (see [expanded-prompt-template.md](references/expanded-prompt-template.md))
+7. **Generate audio** using `edge-tts` with `zh-CN-YunxiNeural`
+8. **Parse SRT** for scene timing + caption groups
+9. **Build composition** — scenes on track 1, karaoke captions on track 2, audio on track 3
+10. **Validate:** `npx hyperframes lint && npx hyperframes validate && npx hyperframes inspect --samples 10`
+11. **Render:** `npx hyperframes render --output output.mp4`
 
 ## Workflow
 
@@ -25,19 +27,74 @@ Follow these phases in order. Do not skip design or prompt expansion for full vi
 
 ### 1. Content Sourcing
 
-`node scripts/fetch-news.mjs [--size N] [--output FILE]`
+```bash
+node scripts/fetch-news.mjs --size 10 --output .hyperframes/latest-news.md
+```
 
-Fetches latest articles from the API and outputs structured markdown. Select 3-10 articles for the video. The default size is 10.
+Fetches latest articles from the API and outputs structured markdown.
+
+**Select 3-10 articles** for the video. Record their `ID` numbers from the output — you'll need them in the next phase.
 
 See [site-api.md](references/site-api.md) for the full API reference.
+
+### 1.5 Content Deep Dive & Key Points Extraction
+
+After selecting articles, fetch the full detailed content for each one:
+
+```bash
+node scripts/fetch-detail.mjs --ids 826,827,828 --output .hyperframes/article-details.md
+```
+
+This outputs structured markdown with:
+- Full article body (300-800+ Chinese characters from the API's `summary` field)
+- Per-article key-point extraction template
+- Character count hint
+
+Then generate the analysis workspace:
+
+```bash
+node scripts/extract-key-points.mjs \
+  --input .hyperframes/article-details.md \
+  --output .hyperframes/key-points.md \
+  --script    # also emit narration skeletons
+```
+
+Now read `.hyperframes/key-points.md`. For each article, read the full content carefully and extract **3 key points**:
+
+| Point | Purpose | Example |
+|-------|---------|---------|
+| **Point 1: Core Fact** | What happened — who, what, when | "OpenAI plans ChatGPT revamp in weeks" |
+| **Point 2: Key Data / Impact** | Numbers, percentages, scope | "80% code written by Claude AI" |
+| **Point 3: Industry Significance** | Why it matters — trends, future | "Sports consumption shifts to AI-native" |
+
+Fill the 3 points directly in `key-points.md`. Each point should be **15-25 Chinese characters** — concise enough to fit in a single subtitle line but substantial enough to explain clearly.
+
+**Why extract 3 points?** — A single headline is too shallow for viewer engagement; the full summary is too long for on-screen text. Three structured points give the right depth: core fact, concrete data, and broader meaning.
 
 ### 2. Write Narration Script
 
 Write the script in `.hyperframes/script.txt`. Use pure Chinese text — no English words needed since edge-tts handles Chinese natively.
 
-**Narration pace:** edge-tts `zh-CN-YunxiNeural` speaks at ~3-4 chars/s at normal speed. Each paragraph should be about 20-30 chars for a 5-8 second scene.
+**Narration pace:** edge-tts `zh-CN-YunxiNeural` speaks at ~3-4 chars/s at normal speed. With 3 key points per news item, each news paragraph should be about **45-75 chars** (15-25 seconds) to give each point enough airtime.
 
-**Script structure:** Title → N news paragraphs → Closing.
+**Script structure:**
+
+```
+[OPENING] 大家好，今天是6月8日，欢迎收看AI资讯速递。
+
+[NEWS 1 title]
+[Point 1: core fact] [Point 2: key data] [Point 3: significance]
+
+[NEWS 2 title]
+[Point 1] [Point 2] [Point 3]
+
+...
+
+[CLOSING] 以上就是今天的AI资讯，感谢收看，我们下期再见！
+```
+
+**Example — 3-point narration:**
+> NBA中国联手阿里巴巴推出了首个官方大模型NBA Chat。这个模型基于阿里千问大模型开发，深度融合了NBA历史数据与球员分析。这标志着文体娱乐正成为大模型落地的核心竞技场。
 
 Mark emphasis words in a sidecar `.hyperframes/emphasis.txt` (brand names, numbers) for caption styling.
 
@@ -50,7 +107,7 @@ Before writing ANY HTML, establish visual identity. If you reach for ad-hoc colo
 1. **If `design.md` exists** in the project root — use its exact hex codes, fonts, and motion rules
 2. **If not** — copy [design-template.md](references/design-template.md) to `design.md` and customize channel name if needed
 
-All scenes share the same skeleton (badge → headline → summary/stat). Only content and glow hue rotate per scene. See design-template for palette, typography, depth layers, and track layout.
+All scenes share the same skeleton (badge → headline → key points). Only content and glow hue rotate per scene. See design-template for palette, typography, depth layers, and track layout.
 
 ### 4. Prompt Expansion (Mandatory)
 
@@ -58,10 +115,11 @@ Write `.hyperframes/expanded-prompt.md` before building HTML. Use [expanded-prom
 
 Read:
 - `design.md`
+- `key-points.md` (the filled key points per article)
 - [news-video-patterns.md](references/news-video-patterns.md) — pick scene type per news item
 - [workflow.md](references/workflow.md)
 
-The expansion must include: rhythm declaration, per-scene type + mood + depth layers + animation verbs, transition choreography, caption plan.
+The expansion must include: rhythm declaration, per-scene type + mood + depth layers + animation verbs, transition choreography, caption plan. Each news scene must account for the 3 key points — either as animated bullet points or a key-points card.
 
 **Skip only** for single-scene edits or trivial timing fixes.
 
@@ -107,7 +165,7 @@ def parse_srt(filepath):
     return result
 ```
 
-Group SRT entries by script paragraphs for scene timing.
+Group SRT entries by script paragraphs for scene timing. With 3 key points per news item, you'll have roughly 3-5 SRT entries per news scene.
 
 **Captions must be 1:1 with SRT entries** — never manually split or estimate timings:
 ```bash
@@ -124,16 +182,19 @@ Scene `start`/`end` in GSAP must use the same SRT boundaries (see section 7).
 | Key number (融资, %, 参数量) | Number/Stat Card |
 | Product / partnership | Headline + Summary |
 | Policy / trend | Headline Card |
+| **3 Key Points (default for deep-dive)** | **Key Points Card** — headline + 3 animated bullets |
 | Opening | Title Card |
 | Ending | Closing Card |
 
-**Video structure (example: 10 items, ~82s):**
+For most news items, use the **Key Points Card** scene type: badge + headline + 3 animated bullet points (one per key point from the extraction). Each bullet fades/slides in sequentially as the narrator reads them.
+
+**Video structure (example: 5 items with 3 key points each, ~90s):**
 
 | Scene | Content | Duration | From SRT |
 |-------|---------|----------|----------|
 | Scene 1 | Title | ~7s | SRT entries 1-3 |
-| Scenes 2-11 | 10 news items | 5-9s each | Individual SRT groups |
-| Scene 12 | Closing | ~5s | Last SRT entries |
+| Scenes 2-6 | 5 news items (3 KPs each) | 12-20s each | Individual SRT groups |
+| Scene 7 | Closing | ~5s | Last SRT entries |
 
 **Scene start/duration from SRT (chain to avoid overlaps):**
 ```python
@@ -175,6 +236,29 @@ Read values from `design.md`. Defaults in [design-template.md](references/design
 
 **Emphasis in content:** wrap brands and numbers in `<span class="accent">` (`#00d4ff`, weight 700).
 
+**3 Key Points layout:** Use a numbered list or 3 stacked cards:
+
+```html
+<div class="scene-content" id="s2-content">
+  <span class="badge">行业动态</span>
+  <h2 class="headline">NBA Chat 正式上线</h2>
+  <div class="key-points">
+    <div class="kp-item" id="s2-kp1">
+      <span class="kp-num">1</span>
+      <span class="kp-text">NBA中国联手阿里推出首个官方大模型</span>
+    </div>
+    <div class="kp-item" id="s2-kp2">
+      <span class="kp-num">2</span>
+      <span class="kp-text">基于千问模型，融合历史数据与球员分析</span>
+    </div>
+    <div class="kp-item" id="s2-kp3">
+      <span class="kp-num">3</span>
+      <span class="kp-text">文体娱乐成AI大模型落地核心赛道</span>
+    </div>
+  </div>
+</div>
+```
+
 **Layout before animation:** build the hero frame as static CSS first. Use flex on `.scene-content` — reserve `position:absolute` for decoratives only.
 
 #### 7.3 GSAP Animation Rules
@@ -198,14 +282,14 @@ gsap.set("[id^='s']", { opacity: 0 });
 **Each scene is its own clip** — do not nest all scenes inside one `#scenes-container` div. HyperFrames needs per-scene `data-start` / `data-duration`:
 
 ```html
-<div id="s2" class="clip scene" data-track-index="1" data-start="8" data-duration="7">
+<div id="s2" class="clip scene" data-track-index="1" data-start="8" data-duration="16">
   ...
 </div>
 ```
 
 GSAP tweens visibility within each scene clip; the renderer shows/hides clips by time.
 
-**Standard news scene timeline:**
+**Key Points Card scene timeline (standard for deep-dive):**
 
 ```javascript
 tl.to("#progress-fill", { scaleX: 1, duration: TOTAL_DURATION, ease: "none" }, 0);
@@ -218,7 +302,13 @@ tl.from("#sX-counter", { x: 40, opacity: 0, duration: 0.4 }, sceneStart + 0.1);
 tl.from("#sX-badge", { scale: 0, opacity: 0, duration: 0.35, ease: "back.out(1.7)" }, sceneStart + 0.2);
 tl.from("#sX-headline", { y: 50, opacity: 0, duration: 0.6, ease: "power3.out" }, sceneStart + 0.5);
 tl.from("#sX-summary", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, sceneStart + 1.1);
-// Stat card variant:
+
+// 3 Key Points — staggered animation as narrator reads each one:
+tl.from("#sX-kp1", { x: -30, opacity: 0, duration: 0.5, ease: "power2.out" }, sceneStart + 1.5);
+tl.from("#sX-kp2", { x: -30, opacity: 0, duration: 0.5, ease: "power2.out" }, sceneStart + 5.5);
+tl.from("#sX-kp3", { x: -30, opacity: 0, duration: 0.5, ease: "power2.out" }, sceneStart + 10.5);
+
+// Stat card variant (for data-heavy news):
 tl.from("#sX-stat", { y: 30, scale: 0.5, opacity: 0, duration: 0.7, ease: "expo.out" }, sceneStart + 0.5);
 
 tl.fromTo("#sX", { opacity: 0 }, { opacity: 1, duration: 0.1 }, sceneStart);
@@ -234,11 +324,14 @@ tl.set("#sX", { opacity: 0 }, sceneStart + sceneDur);
 | Headline | `y: 50 → 0` | `power3.out` | Slide-up |
 | Summary | `y: 30 → 0` | `power2.out` | Stagger after headline |
 | Stat number | `y: 30, scale: 0.5 → 1` | `expo.out` | For Number/Stat Card |
+| **Key Point item** | **x: -30 → 0** | **`power2.out`** | **Slide-in left, staggered** |
 | Deco glow | `scale: 1 → 1.05` | `none` | Full scene duration |
 | Scene fade-in | `opacity: 0 → 1` | — | 0.1s |
 | Scene fade-out | `opacity: 1 → 0` | `power2.in` | 0.3s before end |
 | Hard kill | `tl.set(id, {opacity:0}, endTime)` | none | Required |
 | Progress bar | `scaleX: 0 → 1` | `none` | Full video |
+
+The 3 key points stagger timing should align with the SRT boundaries for their respective subtitles. Use the SRT parsed timestamps to determine when each point is being narrated.
 
 Register: `window.__timelines["main"] = tl` with `{ paused: true }`.
 
@@ -327,8 +420,10 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 
 **Checklist:**
 - [ ] `design.md` exists and all colors match
-- [ ] `.hyperframes/expanded-prompt.md` written
-- [ ] Scene types vary (not all Headline+Summary)
+- [ ] `key-points.md` exists with 3 points filled per article
+- [ ] `.hyperframes/expanded-prompt.md` written with 3KP scene types
+- [ ] Scene types vary (Key Points Card, Headline+Summary, Stat Card)
+- [ ] 3 key points animated sequentially, staggered by SRT timing
 - [ ] Transitions between every scene — no jump cuts
 - [ ] Karaoke captions on track 2, synced to SRT
 - [ ] Caption self-lint passes
@@ -357,20 +452,30 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 | White flash on cut | Blank frame between scenes | `#bg-plate` + overlapping crossfade, no slide-left |
 | Kokoro TTS garbled | Broken Chinese | Use edge-tts instead |
 | macOS `say` spells English | Letter-by-letter | Use edge-tts or Chinese equivalents |
+| Key points not aligned with narration | Visual bullet lags behind/leads audio | Align KP stagger times with SRT entry timestamps for each key point |
+| Key points overflow | 3 bullets exceed scene height | Reduce font sizes, use `.kp-text { font-size: 28px }`, reduce padding |
+| IDs missing for detail fetch | Can't get full content | Note IDs from `fetch-news.mjs` output; use `--json` flag for cleaner parsing |
 
 ### Content Refresh
 
 1. Re-fetch: `node scripts/fetch-news.mjs --size 10 --output .hyperframes/latest-news.md`
-2. Rewrite `.hyperframes/script.txt` and update `.hyperframes/expanded-prompt.md`
-3. TTS + SRT: `edge-tts --voice zh-CN-YunxiNeural -f .hyperframes/script.txt --write-media assets/narration.mp3 --write-subtitles assets/narration.srt`
-4. Parse SRT → scene timing + caption groups
-5. Regenerate HTML (keep `design.md` unchanged for style consistency)
-6. Re-render: `npx hyperframes render --output ai-news-new.mp4`
+2. Re-fetch detail for selected articles: `node scripts/fetch-detail.mjs --ids ID,ID --output .hyperframes/article-details.md`
+3. Update key points: `node scripts/extract-key-points.mjs --input .hyperframes/article-details.md --output .hyperframes/key-points.md --script`
+4. Fill in the 3 key points in `key-points.md` (read full content per article)
+5. Rewrite `.hyperframes/script.txt` and update `.hyperframes/expanded-prompt.md`
+6. TTS + SRT: `edge-tts --voice zh-CN-YunxiNeural -f .hyperframes/script.txt --write-media assets/narration.mp3 --write-subtitles assets/narration.srt`
+7. Parse SRT → scene timing + caption groups
+8. Regenerate HTML (keep `design.md` unchanged for style consistency)
+9. Re-render: `npx hyperframes render --output ai-news-new.mp4`
 
 ## References
 
 | File | Purpose |
 |------|---------|
+| [scripts/fetch-news.mjs](scripts/fetch-news.mjs) | Fetch article list from API |
+| [scripts/fetch-detail.mjs](scripts/fetch-detail.mjs) | Fetch full detail for selected articles by ID |
+| [scripts/extract-key-points.mjs](scripts/extract-key-points.mjs) | Structure article content for 3-key-point extraction |
+| [scripts/srt-to-captions.mjs](scripts/srt-to-captions.mjs) | Generate caption overlay from SRT |
 | [design-template.md](references/design-template.md) | Copy to `design.md` — palette, typography, motion |
 | [expanded-prompt-template.md](references/expanded-prompt-template.md) | Mandatory pre-build production plan |
 | [caption-karaoke.md](references/caption-karaoke.md) | Karaoke subtitle overlay implementation |
