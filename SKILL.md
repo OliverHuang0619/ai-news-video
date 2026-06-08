@@ -192,24 +192,29 @@ For most news items, use the **Key Points Card** scene type: badge + headline + 
 
 | Scene | Content | Duration | From SRT |
 |-------|---------|----------|----------|
-| Scene 1 | Title | ~7s | SRT entries 1-3 |
+| Scene 1 | Title | ~5-6s | SRT entries 1-3 |
 | Scenes 2-6 | 5 news items (3 KPs each) | 12-20s each | Individual SRT groups |
-| Scene 7 | Closing | ~5s | Last SRT entries |
+| Scene 7 | Closing | ~5-8s | Last SRT entries |
 
 **Scene start/duration from SRT (chain to avoid overlaps):**
 ```python
-para_ends = [...]  # End times from SRT grouping
+# Group SRT entries per scene, extract first start and last end
+# para_starts: first SRT start time per scene group
+# para_ends: last SRT end time per scene group
+para_starts = [0.1, 5.15, 22.112, ...]  # First SRT entry start per scene
+para_ends   = [5.2, 22.112, 39.787, ...]  # Last SRT entry end per scene
 total_dur = int(para_ends[-1]) + 1
 
+# scene_starts = int() of each scene's first SRT start time
+# (NOT int(prev_end) + 1 — that creates a ~1s gap where audio precedes visuals)
 scene_starts = [0]
-for e in para_ends[:-1]:
-    scene_starts.append(int(e) + 1)
+for s in para_starts[1:]:
+    scene_starts.append(int(s))
 
 scene_durs = []
 for i in range(len(scene_starts) - 1):
     scene_durs.append(scene_starts[i + 1] - scene_starts[i])
 scene_durs.append(total_dur - scene_starts[-1])
-```
 
 ### 7. Build Composition
 
@@ -454,6 +459,7 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 | macOS `say` spells English | Letter-by-letter | Use edge-tts or Chinese equivalents |
 | Key points not aligned with narration | Visual bullet lags behind/leads audio | Align KP stagger times with SRT entry timestamps for each key point |
 | Key points overflow | 3 bullets exceed scene height | Reduce font sizes, use `.kp-text { font-size: 28px }`, reduce padding |
+| Audio precedes scene | Narration starts before scene title/KPs appear | Use `int(srt_start)` not `int(prev_end) + 1` for scene `data-start` |
 | IDs missing for detail fetch | Can't get full content | Note IDs from `fetch-news.mjs` output; use `--json` flag for cleaner parsing |
 
 ### Content Refresh

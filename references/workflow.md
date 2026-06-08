@@ -133,7 +133,7 @@ npx hyperframes transcribe assets/narration.mp3 --output assets/captions.json --
 1. **Scene count:** title + N news + closing
 2. **Scene types:** use **Key Points Card** as default (3 animated bullets + headline). Vary with Stat Card for data-heavy news.
 3. **Tempo:** `hook – 快讯×N (each with 3 KPs) – 收尾`
-4. **Duration:** from SRT grouping (title ~7s, news **12-20s each** with 3 KPs, closing ~5s)
+4. **Duration:** from SRT grouping (title ~7s, news **12-20s each** with 3 KPs, closing ~5-8s)
 
 **With 3 key points:** news items are longer (12-20s each). Each key point gets ~5-8 seconds narrated screen time. Animate each KP bullet as the narrator reads it — synchronize GSAP stagger times with SRT entry timestamps.
 
