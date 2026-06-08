@@ -374,13 +374,13 @@ Closing (4s)
 ### Headline entrance
 ```
 from: { y: 40, opacity: 0 }
-to:   { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }
+to:   { y: 0, opacity: 1, duration: 0.7, ease: "power3.out" }
 ```
 
 ### Key Point entrance (each of the 3 points)
 ```
-from: { x: -30, opacity: 0 }
-to:   { x: 0, opacity: 1, duration: 0.5, ease: "power2.out" }
+from: { x: -35, opacity: 0 }
+to:   { x: 0, opacity: 1, duration: 0.6, ease: "power3.out" }
 ```
 Delay: staggered by SRT timestamps.
 

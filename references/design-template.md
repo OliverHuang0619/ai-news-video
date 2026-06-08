@@ -212,7 +212,7 @@ Every video uses the same structural template. Only content and visual elements 
 
 | Verb | Ease | Element |
 |------|------|---------|
-| Pop-in | `back.out(1.7)` | Badge, icon accents |
+| Pop-in | `back.out(2.0)` + rotation -15° | Badge, icon accents |
 | Slide-up | `power3.out` | Headline |
 | Subtle rise | `power2.out` | Summary, KPs, labels |
 | Dramatic | `expo.out` | Stat number, data counter value, comparison values |
@@ -230,8 +230,8 @@ Every video uses the same structural template. Only content and visual elements 
 
 | From → To | Type | Duration | Ease |
 |-----------|------|----------|------|
-| Title → News 1 | Crossfade | 0.4s | `power2.inOut` |
-| News N → News N+1 | Crossfade | 0.35s | `power2.inOut` |
+| Title → News 1 | Crossfade + scale | 0.4s | `power2.inOut` |
+| News N → News N+1 | Crossfade + scale | 0.35s | `power2.inOut` |
 | Last news → Closing | Fade to dark | 0.6s | `power2.in` |
 
 Animate every element IN via `gsap.from()`. The transition IS the exit — do not add separate exit tweens before a transition (except closing scene).
@@ -269,3 +269,4 @@ For data-rich articles, combine multiple visual elements:
 | 1 | Scene clips (title + news + closing) |
 | 2 | Caption overlay sub-composition |
 | 3 | Narration audio |
+

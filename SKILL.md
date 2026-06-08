@@ -327,12 +327,12 @@ tl.set("#sX", { opacity: 0 }, sceneStart + sceneDur);
 
 | Element | Animation | Ease | Notes |
 |---------|-----------|------|-------|
-| Badge | `scale: 0 → 1` | `back.out(1.7)` | Pop-in |
-| Headline | `y: 50 → 0` | `power3.out` | Slide-up |
+| Badge | `scale: 0 → 1, rotation: -15→0` | `back.out(2.0)` | Pop-in with overshoot |
+| Headline | `y: 50 → 0` | `power3.out` | Smooth slide-up |
 | Summary | `y: 30 → 0` | `power2.out` | Stagger after headline |
 | Stat number | `y: 30, scale: 0.5 → 1` | `expo.out` | For Number/Stat Card |
-| **Key Point item** | **x: -30 → 0** | **`power2.out`** | **Slide-in left, staggered** |
-| Deco glow | `scale: 1 → 1.05` | `none` | Full scene duration |
+| **Key Point item** | **x: -35 → 0** | **`power3.out`** | **Smooth slide-in, staggered** |
+| Deco glow | `scale: 1 → 1.08` + opacity pulse 0.12↔0.22 | `sine.inOut, 3s cycle` | Breathing glow over scene |
 | Scene fade-in | `opacity: 0 → 1` | — | 0.1s |
 | Scene fade-out | `opacity: 1 → 0` | `power2.in` | 0.3s before end |
 | Hard kill | `tl.set(id, {opacity:0}, endTime)` | none | Required |
@@ -348,15 +348,15 @@ No jump cuts. Transitions ARE the exit — do not add separate exit tweens befor
 
 | From → To | Type | Duration | Ease |
 |-----------|------|----------|------|
-| All scene cuts | Overlapping crossfade | 0.35s | `power2.inOut` |
+| All scene cuts | Overlapping crossfade + scale 1.02→1 | 0.35s | `power2.inOut` |
 
 **No slide-left transitions** — they expose the white renderer canvas when scenes move off-screen.
 
 ```javascript
 var TRANS = 0.35;
 // Incoming starts TRANS before outgoing ends — always one scene visible
-tl.fromTo("#s2", { opacity: 0 }, { opacity: 1, duration: TRANS, ease: "power2.inOut" }, s2.start - TRANS);
-tl.to("#s1", { opacity: 0, duration: TRANS, ease: "power2.inOut" }, s1.end - TRANS);
+tl.fromTo("#s2", { opacity: 0, scale: 1.02 }, { opacity: 1, scale: 1, duration: TRANS, ease: "power2.inOut" }, s2.start - TRANS);
+tl.to("#s1", { opacity: 0, scale: 0.98, duration: TRANS, ease: "power2.inOut" }, s1.end - TRANS);
 ```
 
 Add a persistent `#bg-plate { background: #0a0a1a }` behind all scenes. Do not add per-element exit tweens before crossfade.
