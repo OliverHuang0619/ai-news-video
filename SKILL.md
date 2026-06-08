@@ -107,7 +107,13 @@ def parse_srt(filepath):
     return result
 ```
 
-Group SRT entries by script paragraphs for scene timing. Use all entries for caption groups (see section 7).
+Group SRT entries by script paragraphs for scene timing.
+
+**Captions must be 1:1 with SRT entries** — never manually split or estimate timings:
+```bash
+node scripts/srt-to-captions.mjs assets/narration.srt compositions/caption-overlay.html
+```
+Scene `start`/`end` in GSAP must use the same SRT boundaries (see section 7).
 
 ### 6. Structure the Video
 
@@ -161,7 +167,7 @@ cp node_modules/gsap/dist/gsap.min.js assets/gsap.min.js
 Read values from `design.md`. Defaults in [design-template.md](references/design-template.md):
 
 - Background: `#0a0a1a`, Accent: `#00d4ff` / `#7c3aed`, Summary: `#b0b0cc`
-- Scene layout: `div.clip.scene` on track 1, `position:absolute; inset:0; 1920×1080`
+- Scene layout: `div.clip.scene` on track 1, `position:absolute; inset:0; 1920×1080; background:#0a0a1a` (**every `.scene` must set background — renderer default is white**)
 - Content: flexbox center, padding `80px 120px`, `overflow:hidden`, `word-break:break-word`
 - Depth layers: `.deco-grid` (background) → `.deco-glow` (mid, hue rotates) → content (foreground)
 - Persistent: `.progress-track` + `.progress-fill` on track 0
@@ -179,6 +185,25 @@ Read values from `design.md`. Defaults in [design-template.md](references/design
 ```
 
 **Never use CSS `opacity: 0`** — use `gsap.set()` or `gsap.fromTo()`.
+
+**Initial scene hide — use `.scene` class only:**
+```javascript
+// CORRECT
+gsap.set(".scene", { opacity: 0 });
+
+// WRONG — matches #scenes-container, #s1-title, #s1-glow, etc. and hides the entire scene track
+gsap.set("[id^='s']", { opacity: 0 });
+```
+
+**Each scene is its own clip** — do not nest all scenes inside one `#scenes-container` div. HyperFrames needs per-scene `data-start` / `data-duration`:
+
+```html
+<div id="s2" class="clip scene" data-track-index="1" data-start="8" data-duration="7">
+  ...
+</div>
+```
+
+GSAP tweens visibility within each scene clip; the renderer shows/hides clips by time.
 
 **Standard news scene timeline:**
 
@@ -223,15 +248,18 @@ No jump cuts. Transitions ARE the exit — do not add separate exit tweens befor
 
 | From → To | Type | Duration | Ease |
 |-----------|------|----------|------|
-| Title → News 1 | Crossfade | 0.4s | `power2.inOut` |
-| News N → News N+1 | Slide left (`x: -100`) | 0.5s | `expo.inOut` |
-| Last news → Closing | Fade to dark | 0.6s | `power2.in` |
+| All scene cuts | Overlapping crossfade | 0.35s | `power2.inOut` |
+
+**No slide-left transitions** — they expose the white renderer canvas when scenes move off-screen.
 
 ```javascript
-// Slide-left between news items (incoming scene starts slightly before outgoing ends)
-tl.fromTo("#sX", { x: 100, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, ease: "expo.inOut" }, sceneStart);
-tl.to("#sX-prev", { x: -100, opacity: 0, duration: 0.5, ease: "expo.inOut" }, sceneStart);
+var TRANS = 0.35;
+// Incoming starts TRANS before outgoing ends — always one scene visible
+tl.fromTo("#s2", { opacity: 0 }, { opacity: 1, duration: TRANS, ease: "power2.inOut" }, s2.start - TRANS);
+tl.to("#s1", { opacity: 0, duration: TRANS, ease: "power2.inOut" }, s1.end - TRANS);
 ```
+
+Add a persistent `#bg-plate { background: #0a0a1a }` behind all scenes. Do not add per-element exit tweens before crossfade.
 
 Chain clip `data-start` cumulatively — `data-start + data-duration` must equal next scene's `data-start`.
 
@@ -247,6 +275,16 @@ Full implementation: [caption-karaoke.md](references/caption-karaoke.md)
      data-composition-id="captions"
      data-composition-src="compositions/caption-overlay.html">
 </div>
+```
+
+```css
+/* captions must stack above #scenes-container (z-index: 1) */
+#captions { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+```
+
+Generate captions from SRT (never hand-write timings):
+```bash
+node scripts/srt-to-captions.mjs assets/narration.srt compositions/caption-overlay.html
 ```
 
 Summary:
@@ -312,6 +350,11 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 | Ghost captions | Text lingers after phrase | Hard kill + caption self-lint |
 | Static subtitle bar | Blocks visuals, out of sync | Use karaoke overlay (section 7.5) |
 | Inconsistent style | Each video looks different | Use `design.md` + expanded-prompt |
+| `[id^='s']` gsap.set | White/blank video, captions only | Use `gsap.set(".scene", {opacity:0})` only |
+| All scenes in one container | Scenes never render | Each `.scene` is its own `clip` with timing attrs |
+| White text on white bg | Headlines invisible | `background:#0a0a1a` on every `.scene` + `text-shadow` on headlines |
+| Subtitles out of sync | Captions don't match audio | Run `srt-to-captions.mjs` — 1:1 with SRT, never manual splits |
+| White flash on cut | Blank frame between scenes | `#bg-plate` + overlapping crossfade, no slide-left |
 | Kokoro TTS garbled | Broken Chinese | Use edge-tts instead |
 | macOS `say` spells English | Letter-by-letter | Use edge-tts or Chinese equivalents |
 

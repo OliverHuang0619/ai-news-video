@@ -37,6 +37,18 @@ Copy this file to the project root as `design.md` before building any compositio
 
 Use `window.__hyperframes.fitTextFontSize()` when headlines exceed 2 lines.
 
+## Scene Background (Non-Negotiable)
+
+HyperFrames headless render defaults to a **white canvas**. `body { background: #0a0a1a }` alone is not enough.
+
+```css
+.scene {
+  background: #0a0a1a; /* required on every scene clip */
+}
+```
+
+Without this, white headline text (`#ffffff`) becomes invisible.
+
 ## Scene Skeleton (fixed across all videos)
 
 Every video uses the same structural template. Only content and glow hue change.
@@ -103,7 +115,8 @@ Stat-heavy news → use **Number/Stat Card** layout (see [news-video-patterns.md
 - Active word: `#00d4ff`, scale 1.08
 - Read words: opacity 0.5
 - Unread words: opacity 0.3
-- No opaque background bar — use `text-shadow` for readability
+- Semi-transparent dark bar: `background: rgba(0,0,0,0.72)` + `text-shadow`
+- Caption opacity: `1` when visible (not `0.5` — washes out on any light bleed)
 - Full spec: [caption-karaoke.md](caption-karaoke.md)
 
 ## Tracks

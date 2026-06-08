@@ -10,7 +10,7 @@ Read HyperFrames `references/captions.md` and `references/dynamic-techniques.md`
 |------------------|----------------------------|
 | Whole paragraph appears at once | Words highlight in sync with narration |
 | Tied to scene div | Independent track — survives scene transitions |
-| Opaque box blocks visuals | `text-shadow` only — cleaner frame |
+| White text on white canvas | Unreadable captions | Dark bar `rgba(0,0,0,0.72)` + opacity `1` when visible |
 | No emphasis on brands/numbers | Per-word accent color + scale pop |
 
 ## Pipeline
@@ -193,6 +193,12 @@ GROUPS.forEach(function (group, gi) {
 window.__timelines["captions"] = tl;
 ```
 
+**HyperFrames render rules for captions:**
+- Use `#cg-N` string selectors in GSAP — not DOM element references
+- Use only `tl.set()` / `tl.to()` / `tl.fromTo()` — **never `tl.add()` callbacks** (seek render does not run them)
+- Static HTML caption divs in the sub-composition (generate via `scripts/srt-to-captions.mjs`)
+- Parent `index.html` must set `#captions { z-index: 20 }` above `#scenes-container { z-index: 1 }`
+
 ### 8. Emphasis word detection
 
 Flag words before building HTML:
@@ -236,7 +242,7 @@ groupEl.style.fontSize = result.fontSize + "px";
 - [ ] Caption overlay on track 2, scenes on track 1, audio on track 3
 - [ ] One group visible at a time
 - [ ] Hard kill after every group exit
-- [ ] No opaque subtitle bar
+- [ ] Caption bar uses `rgba(0,0,0,0.72)` for contrast
 - [ ] Emphasis words get accent + larger scale pop
 - [ ] Self-lint passes (no ghost captions after group.end)
 - [ ] `npx hyperframes inspect --samples 10` — captions don't cover headline
