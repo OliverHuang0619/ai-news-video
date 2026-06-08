@@ -17,7 +17,7 @@ Read:
 
 ## Identity
 - Source: design.md (or design-template.md defaults)
-- Rhythm: hook – 快讯×N (each with 3 key points) – 收尾
+- Rhythm: hook – 快讯×N (varied scene types) – 收尾
 - Total target duration: ~Xs (from SRT)
 
 ## Palette (from design.md — do not change)
@@ -31,7 +31,7 @@ Read:
 - KP1 (Core Fact): [extracted point]
 - KP2 (Key Data): [extracted point]
 - KP3 (Significance): [extracted point]
-- Video scene: Key Points Card | Stat Card | Headline+Summary (pick one)
+- Video scene: [scene type — see selection guide below]
 
 ### [News 2 — headline]
 - KP1: ...
@@ -51,19 +51,25 @@ Read:
 - **Transition out:** crossfade 0.4s → S2
 
 ### S2 — [News headline 1] (~Xs)
-- **Type:** Key Points Card (default) | Headline+Summary | Stat Card
-- **Category badge:** [行业动态 / 融资 / 产品发布 / ...]
-- **Glow hue:** cyan
-- **3 Key Points animation:** KP1 slide-in at SRT[t1], KP2 at SRT[t2], KP3 at SRT[t3]
+- **Type:** [Key Points Card | Data Dashboard Card | Comparison Card | Quote Card | Timeline Card | Stat Card]
+- **Category badge:** [行业动态 / 行业数据 / 行业声音 / 趋势预测 / 政策法规 ...]
+- **Badge icon class:** [icon-data / icon-product / icon-policy / icon-quote / icon-research]
+- **Glow hue:** [cyan / purple / blue / green / amber / rose]
+- **Rich elements:**
+  - [e.g., Hero counter at SRT[t1], ratio bar at SRT[t2]]
+  - [e.g., Comparison bars: left at SRT[t1], right at SRT[t2]]
+  - [e.g., Quote text fades at SRT[t1], attribution at SRT[t2]]
+  - [e.g., Timeline items staggered 0.3s apart from SRT[t1]]
+  - [e.g., 3 KPs: KP1 at SRT[t1], KP2 at SRT[t2], KP3 at SRT[t3]]
 - **Emphasis spans:** [brand names, numbers from key points]
-- **Layers:** deco-grid → glow → badge pop → headline → KP1 → KP2 → KP3
-- **Verbs:** back.out badge, power3.out headline, power2.out each KP (stagger by SRT)
+- **Layers:** deco-grid → glow → badge pop → headline → rich elements
+- **Verbs:** back.out badge, power3.out headline, [specific verbs for rich elements]
 - **Transition out:** crossfade 0.35s → S3
 
 ### S3 — [News headline 2] (~Xs)
-- **Type:** ... (Key Points Card or Stat Card)
+- **Type:** ... (vary from previous scene)
 - **Glow hue:** purple
-- **3 Key Points:** KP1 at SRT[t1], KP2 at SRT[t2], KP3 at SRT[t3]
+- **Rich elements:** ...
 - ...
 
 (repeat for each news item)
@@ -91,12 +97,16 @@ Read:
 
 Read [news-video-patterns.md](news-video-patterns.md). Pick per item:
 
-| Content signal | Scene type | Hero element |
-|----------------|------------|--------------|
-| Has key number (融资, %, 参数量) | Number/Stat Card | 140px stat + label |
-| Product launch / partnership | Key Points Card (default) | headline + 3 animated bullets |
-| Policy / industry trend | Key Points Card | headline + 3 KPs |
-| Opening | Title Card | channel + date + title |
-| Ending | Closing Card | CTA + channel name |
+| Content signal | Scene type | Hero element | Icon class |
+|----------------|------------|--------------|------------|
+| One key number (融资, %, 参数量) | Number/Stat Card | 140px stat + label | — |
+| 2-3 metrics or percentages | Data Dashboard Card | animated counter + ratio bars | `icon-data` |
+| Notable direct quote | Quote Card | quote block with attribution | `icon-quote` |
+| Before/after, comparison | Comparison Card | dual progress bars | `icon-data` |
+| Multi-year trend / prediction | Timeline Card | vertical timeline with markers | `icon-research` |
+| Product launch / partnership | Key Points Card (default) | headline + 3 animated bullets | `icon-product` |
+| Policy / trend | Key Points Card | headline + 3 KPs | `icon-policy` |
+| Opening | Title Card | channel + date + title | — |
+| Ending | Closing Card | CTA + channel name | — |
 
-**Use Key Points Card as default for most news items.** Switch to Stat Card only when a single number dominates the article. Vary scene types across items — at least one Stat Card if data allows.
+**Vary scene types across items.** Use at least one Data Dashboard or Comparison card per video. Do not use Key Points Card for every item.

@@ -177,14 +177,16 @@ Scene `start`/`end` in GSAP must use the same SRT boundaries (see section 7).
 
 **Scene type per news item** — do not use identical layout for every item. See [news-video-patterns.md](references/news-video-patterns.md):
 
-| Content | Scene type |
-|---------|------------|
-| Key number (融资, %, 参数量) | Number/Stat Card |
-| Product / partnership | Headline + Summary |
-| Policy / trend | Headline Card |
-| **3 Key Points (default for deep-dive)** | **Key Points Card** — headline + 3 animated bullets |
-| Opening | Title Card |
-| Ending | Closing Card |
+| Content | Scene type | Badge icon |
+|---------|------------|------------|
+| **3 Key Points (default)** | **Key Points Card** — headline + 3 bullets | icon-product |
+| 2-3 metrics / percentages | **Data Dashboard Card** — counter + ratio bars | icon-data |
+| Notable direct quote | **Quote Card** — quote block + attribution | icon-quote |
+| Before/after comparison | **Comparison Card** — dual progress bars | icon-data |
+| Multi-year trend / prediction | **Timeline Card** — vertical milestone markers | icon-research |
+| One key number (融资, %, 参数量) | Number/Stat Card | — |
+| Opening | Title Card | — |
+| Ending | Closing Card | — |
 
 For most news items, use the **Key Points Card** scene type: badge + headline + 3 animated bullet points (one per key point from the extraction). Each bullet fades/slides in sequentially as the narrator reads them.
 
@@ -427,12 +429,14 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 - [ ] `design.md` exists and all colors match
 - [ ] `key-points.md` exists with 3 points filled per article
 - [ ] `.hyperframes/expanded-prompt.md` written with 3KP scene types
-- [ ] Scene types vary (Key Points Card, Headline+Summary, Stat Card)
+- [ ] Scene types vary (KP Card, Data Dashboard, Comparison, Quote, Timeline, Stat Card)
 - [ ] 3 key points animated sequentially, staggered by SRT timing
 - [ ] Transitions between every scene — no jump cuts
 - [ ] Karaoke captions on track 2, synced to SRT
 - [ ] Caption self-lint passes
 - [ ] Hard kills on all scenes and caption groups
+- [ ] Rich visual elements used (data counter, ratio bars, quotes, timeline) when appropriate
+- [ ] Badge icon classes applied per scene type
 - [ ] Text fits without overflow
 
 ### 9. Known Issues & Fixes
