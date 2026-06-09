@@ -1,11 +1,11 @@
 ---
 name: ai-news-video
-description: "Create AI news videos from aixiaoerke.com/news using HyperFrames. Use when asked to: (1) turn AI news articles into a video, (2) create a daily/weekly AI news briefing, (3) build a video summary of latest industry stories, (4) generate a narrated video from news headlines. Supports the full workflow: fetching news from the API, fetching per-article detail, extracting 3 key points per article, generating a narration script, setting up design, expanding prompts, building GSAP-animated compositions with scene transitions, karaoke captions synced to TTS, adding voiceover narration, validating, and rendering."
+description: "Use when asked to turn aixiaoerke.com AI news into short HyperFrames videos, daily or weekly AI news briefings, narrated video summaries from news headlines, or energetic Chinese AI news videos with passionate voiceover."
 ---
 
 # AI News Video
 
-Turn AI news articles from aixiaoerke.com into short videos using HyperFrames. Supports the full pipeline: fetching news, deep-dive content extraction, 3-key-point analysis, scripting, design system, prompt expansion, GSAP motion graphics with transitions, karaoke captions, voiceover, validation, and rendering.
+Turn AI news articles from aixiaoerke.com into short, high-energy Chinese videos using HyperFrames. The default style is passionate but credible: punchy hooks, rising cadence, clear stakes, and motion/captions that amplify the narrator instead of flattening into neutral news reading.
 
 ## Quick Start
 
@@ -15,7 +15,7 @@ Turn AI news articles from aixiaoerke.com into short videos using HyperFrames. S
 4. **Write a narration script:** each news item covers its 3 key points
 5. **Establish design:** copy [design-template.md](references/design-template.md) → `design.md`
 6. **Expand prompt:** write `.hyperframes/expanded-prompt.md` (see [expanded-prompt-template.md](references/expanded-prompt-template.md))
-7. **Generate audio** using `edge-tts` with `zh-CN-YunxiNeural`
+7. **Generate energetic audio** using `edge-tts` with `zh-CN-YunjianNeural`
 8. **Parse SRT** for scene timing + caption groups
 9. **Build composition** — scenes on track 1, karaoke captions on track 2, audio on track 3
 10. **Validate:** `npx hyperframes lint && npx hyperframes validate && npx hyperframes inspect --samples 10`
@@ -71,30 +71,32 @@ Fill the 3 points directly in `key-points.md`. Each point should be **15-25 Chin
 
 **Why extract 3 points?** — A single headline is too shallow for viewer engagement; the full summary is too long for on-screen text. Three structured points give the right depth: core fact, concrete data, and broader meaning.
 
-### 2. Write Narration Script
+### 2. Write Passionate Narration Script
 
 Write the script in `.hyperframes/script.txt`. Use pure Chinese text — no English words needed since edge-tts handles Chinese natively.
 
-**Narration pace:** edge-tts `zh-CN-YunxiNeural` speaks at ~3-4 chars/s at normal speed. With 3 key points per news item, each news paragraph should be about **45-75 chars** (15-25 seconds) to give each point enough airtime.
+**Tone target:** energetic tech commentator, not calm anchor. Every item should answer: "what just happened, why is it exciting, what changes next?" Use short punchy sentences, action verbs, contrast, stakes, and one clear escalation phrase. Avoid hype that invents facts.
+
+**Narration pace:** edge-tts `zh-CN-YunjianNeural` at `--rate=+15%` speaks with sports/novel energy. With 3 key points per news item, each paragraph should be **45-70 chars** (12-18 seconds): fast enough to feel urgent, still clear enough for karaoke captions.
 
 **Script structure:**
 
 ```
-[OPENING] 大家好，今天是6月8日，欢迎收看AI资讯速递。
+[OPENING] AI圈又加速了！今天是6月8日，欢迎收看AI资讯速递。
 
 [NEWS 1 title]
-[Point 1: core fact] [Point 2: key data] [Point 3: significance]
+[Hook] [Point 1: core fact] [Point 2: key data] [Point 3: significance / what changes next]
 
 [NEWS 2 title]
 [Point 1] [Point 2] [Point 3]
 
 ...
 
-[CLOSING] 以上就是今天的AI资讯，感谢收看，我们下期再见！
+[CLOSING] 这就是今天最值得盯住的AI动态。了解更多资讯可访问aixiaoerke.com，我们下期继续追！
 ```
 
-**Example — 3-point narration:**
-> NBA中国联手阿里巴巴推出了首个官方大模型NBA Chat。这个模型基于阿里千问大模型开发，深度融合了NBA历史数据与球员分析。这标志着文体娱乐正成为大模型落地的核心竞技场。
+**High-energy 3-point example:**
+> NBA中国直接把AI带进赛场！NBA Chat由阿里千问驱动，融合历史数据和球员分析。更关键的是，体育娱乐正在变成大模型落地的新战场。
 
 Mark emphasis words in a sidecar `.hyperframes/emphasis.txt` (brand names, numbers) for caption styling.
 
@@ -127,18 +129,19 @@ The expansion must include: rhythm declaration, per-scene type + mood + depth la
 
 **edge-tts** uses Microsoft's online TTS service. Requires internet access.
 
-**Recommended male voice:** `zh-CN-YunxiNeural` (Novel style, Lively/Sunshine tone)
+**Recommended passionate male voice:** `zh-CN-YunjianNeural` (Sports/Novel, Passion)
 
 **Other Chinese voices:**
+- `zh-CN-YunxiNeural` — Male, Novel, Lively/Sunshine; use only when Yunjian sounds too dramatic
 - `zh-CN-YunyangNeural` — Male, News, Professional
-- `zh-CN-YunjianNeural` — Male, Sports/Novel, Passion
 - `zh-CN-XiaoxiaoNeural` — Female, News/Novel, Warm
 - `zh-CN-XiaoyiNeural` — Female, Cartoon/Novel, Lively
 
 ```bash
 pip install edge-tts
 
-edge-tts --voice zh-CN-YunxiNeural -f .hyperframes/script.txt \
+edge-tts --voice zh-CN-YunjianNeural --rate=+15% --pitch=+3Hz \
+  -f .hyperframes/script.txt \
   --write-media assets/narration.mp3 \
   --write-subtitles assets/narration.srt
 
@@ -196,7 +199,7 @@ For most news items, use the **Key Points Card** scene type: badge + headline + 
 |-------|---------|----------|----------|
 | Scene 1 | Title | ~5-6s | SRT entries 1-3 |
 | Scenes 2-6 | 5 news items (3 KPs each) | 12-20s each | Individual SRT groups |
-| Scene 7 | Closing | ~5-8s | Last SRT entries |
+| Scene 7 | Closing (CTA) | ~6-10s | Last SRT entries |
 
 **Scene start/duration from SRT (chain to avoid overlaps):**
 ```python
@@ -389,8 +392,8 @@ node scripts/srt-to-captions.mjs assets/narration.srt compositions/caption-overl
 
 Summary:
 - Parse SRT → caption groups (3-5 words / ~4-6 Chinese chars)
-- Medium-high energy karaoke: active word `#00d4ff` + scale 1.08, read 0.5 opacity, unread 0.3
-- Emphasis words (brands, numbers): scale 1.12 + `.emphasis`
+- High-energy karaoke: active word `#00d4ff` + scale 1.1, read 0.55 opacity, unread 0.3
+- Emphasis words (brands, numbers, escalation phrases): scale 1.14 + `.emphasis`
 - `text-shadow` for readability — no opaque background bar
 - Hard kill after every group: `tl.set(groupEl, { opacity: 0, visibility: "hidden" }, group.end)`
 - Run caption self-lint before registering timeline
@@ -465,6 +468,7 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 | Key points overflow | 3 bullets exceed scene height | Reduce font sizes, use `.kp-text { font-size: 28px }`, reduce padding |
 | Audio precedes scene | Narration starts before scene title/KPs appear | Use `int(srt_start)` not `int(prev_end) + 1` for scene `data-start` |
 | IDs missing for detail fetch | Can't get full content | Note IDs from `fetch-news.mjs` output; use `--json` flag for cleaner parsing |
+| Flat narration | Sounds like neutral news reading | Rewrite with hook + stakes + escalation; use `zh-CN-YunjianNeural --rate=+15% --pitch=+3Hz` |
 
 ### Content Refresh
 
@@ -473,7 +477,7 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 3. Update key points: `node scripts/extract-key-points.mjs --input .hyperframes/article-details.md --output .hyperframes/key-points.md --script`
 4. Fill in the 3 key points in `key-points.md` (read full content per article)
 5. Rewrite `.hyperframes/script.txt` and update `.hyperframes/expanded-prompt.md`
-6. TTS + SRT: `edge-tts --voice zh-CN-YunxiNeural -f .hyperframes/script.txt --write-media assets/narration.mp3 --write-subtitles assets/narration.srt`
+6. TTS + SRT: `edge-tts --voice zh-CN-YunjianNeural --rate=+15% --pitch=+3Hz -f .hyperframes/script.txt --write-media assets/narration.mp3 --write-subtitles assets/narration.srt`
 7. Parse SRT → scene timing + caption groups
 8. Regenerate HTML (keep `design.md` unchanged for style consistency)
 9. Re-render: `npx hyperframes render --output ai-news-new.mp4`

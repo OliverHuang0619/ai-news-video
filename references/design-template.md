@@ -201,7 +201,7 @@ Every video uses the same structural template. Only content and visual elements 
 |-------|------|----------------|
 | S1 | Title Card | channel name, date, hero title, `.deco-glow` |
 | S2–SN | News item | counter, badge, headline, visual elements (KPs / stat / comparison / timeline / quote / ratio), `.deco-glow`, `.deco-grid` |
-| SN+1 | Closing | CTA, channel name, fade to dark |
+| SN+1 | Closing | CTA + site URL, channel name, fade to dark |
 
 **Depth layers (every scene):**
 1. Background: `.deco-grid` or `.deco-dots` (slow drift)

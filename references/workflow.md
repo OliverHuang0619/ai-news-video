@@ -62,7 +62,7 @@ Take the selected news and write a narration script in `.hyperframes/script.txt`
 
 ...
 
-[CLOSING] 以上就是今天的AI资讯，感谢收看，我们下期再见！
+[CLOSING] 以上就是今天的AI资讯，感谢收看！了解更多资讯，可访问aixiaoerke.com，我们下期再见！
 ```
 
 **Example — 3-point narration for one news item (~15-20 chars/point, ~48-60 chars total):**
@@ -78,7 +78,7 @@ List brand names and numbers in `.hyperframes/emphasis.txt` for caption styling.
 [NEWS 1] 首先，NBA中国联手阿里巴巴推出了首个官方大模型"NBA Chat"…
 [NEWS 2] 另一条重要消息，中国将首发公有云大模型Token性能榜…
 [NEWS 3] …
-[CLOSING] 以上就是今天的AI资讯，感谢收看，我们下期再见！
+[CLOSING] 以上就是今天的AI资讯，感谢收看！了解更多资讯，可访问aixiaoerke.com，我们下期再见！
 ```
 
 List brand names and numbers in `.hyperframes/emphasis.txt` for caption styling.

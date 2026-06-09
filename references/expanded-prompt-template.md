@@ -78,7 +78,8 @@ Read:
 - **Type:** Closing Card
 - **Mood:** Warm sign-off
 - **Transition in:** fade from dark 0.6s
-- **Verbs:** CTA fade, logo scale
+- **Verbs:** site URL fade, CTA fade, logo scale
+- **Content:** "了解更多资讯，可访问aixiaoerke.com"
 
 ## Caption Plan
 - Overlay: karaoke medium-high on track 2
@@ -107,6 +108,6 @@ Read [news-video-patterns.md](news-video-patterns.md). Pick per item:
 | Product launch / partnership | Key Points Card (default) | headline + 3 animated bullets | `icon-product` |
 | Policy / trend | Key Points Card | headline + 3 KPs | `icon-policy` |
 | Opening | Title Card | channel + date + title | — |
-| Ending | Closing Card | CTA + channel name | — |
+| Ending | Closing Card | CTA + site URL + channel name | — |
 
 **Vary scene types across items.** Use at least one Data Dashboard or Comparison card per video. Do not use Key Points Card for every item.

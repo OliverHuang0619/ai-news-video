@@ -254,15 +254,16 @@ For data-driven news — highlight a single key number.
 
 ### 10. Closing Card (ending)
 
-Call to action or channel branding.
+Call to action and channel branding. Always include the site URL.
 
 **Elements:**
 - "Thanks for watching" or follow CTA
+- Site URL: "了解更多资讯，可访问aixiaoerke.com"
 - Channel logo/name
 - Decorative: fade to dark
 
-**Typical duration:** 3-4s
-**Pacing:** slow fade to black
+**Typical duration:** 5-7s
+**Pacing:** CTA text fades in, then fade to black
 
 ## Scene Type Selection Guide
 
@@ -278,7 +279,7 @@ Pick the best scene type based on article content:
 | Product launch / partnership | Key Points Card (default) | headline + 3 animated bullets |
 | Policy / industry trend | Key Points Card | headline + 3 KPs |
 | Opening | Title Card | channel + date + title |
-| Ending | Closing Card | CTA + channel name |
+| Ending | Closing Card | CTA + site URL + channel name |
 
 **Vary scene types across items.** Use at least one Data Dashboard or Comparison card per video to add visual variety.
 
