@@ -1,11 +1,11 @@
 ---
 name: ai-news-video
-description: "Use when asked to turn aixiaoerke.com AI news into short HyperFrames videos, daily or weekly AI news briefings, narrated video summaries from news headlines."
+description: "Use when asked to turn aixiaoerke.com AI news into short Remotion videos, daily or weekly AI news briefings, narrated video summaries from news headlines."
 ---
 
 # AI News Video
 
-Turn AI news articles from aixiaoerke.com into short news briefings using HyperFrames. The default style is clear and credible: natural narration, well-structured key points, and motion/captions that support understanding.
+Turn AI news articles from aixiaoerke.com into short news briefings using **Remotion** (React-based video framework). The default style is clear and credible: natural narration, well-structured key points, and motion/captions that support understanding.
 
 ## Quick Start
 
@@ -16,10 +16,10 @@ Turn AI news articles from aixiaoerke.com into short news briefings using HyperF
 5. **Establish design:** copy [design-template.md](references/design-template.md) → `design.md`
 6. **Expand prompt:** write `.hyperframes/expanded-prompt.md` (see [expanded-prompt-template.md](references/expanded-prompt-template.md))
 7. **Generate audio** using `edge-tts` with `zh-CN-YunyangNeural`
-8. **Parse SRT** for scene timing + caption groups
-9. **Build composition** — scenes on track 1, karaoke captions on track 2, audio on track 3
-10. **Validate:** `npx hyperframes lint && npx hyperframes validate && npx hyperframes inspect --samples 10`
-11. **Render:** `npx hyperframes render --output output.mp4`
+8. **Parse SRT** for caption timing data: `node scripts/srt-to-captions.mjs assets/narration.srt assets/captions-data.json`
+9. **Scaffold Remotion project** (see [Build Composition](#6-build-composition))
+10. **Render:** `npx remotion render NewsVideo output.mp4`
+11. **Validate:** Check output video for visual quality, text fit, and timing accuracy
 
 ## Workflow
 
@@ -111,17 +111,17 @@ Mark emphasis words in a sidecar `.hyperframes/emphasis.txt` (brand names, numbe
 ### 3. Design System
 
 <HARD-GATE>
-Before writing ANY HTML, establish visual identity. If you reach for ad-hoc colors or skip `design.md`, stop.
+Before writing ANY code, establish visual identity. If you reach for ad-hoc colors or skip `design.md`, stop.
 </HARD-GATE>
 
 1. **If `design.md` exists** in the project root — use its exact hex codes, fonts, and motion rules
 2. **If not** — copy [design-template.md](references/design-template.md) to `design.md` and customize channel name if needed
 
-All scenes share the same skeleton (badge → headline → key points). Only content and glow hue rotate per scene. See design-template for palette, typography, depth layers, and track layout.
+All scenes share the same visual skeleton (badge → headline → key points). Only content and glow hue rotate per scene.
 
 ### 4. Prompt Expansion (Mandatory)
 
-Write `.hyperframes/expanded-prompt.md` before building HTML. Use [expanded-prompt-template.md](references/expanded-prompt-template.md).
+Write `.hyperframes/expanded-prompt.md` before building any components. Use [expanded-prompt-template.md](references/expanded-prompt-template.md).
 
 Read:
 - `design.md`
@@ -156,7 +156,15 @@ edge-tts --voice zh-CN-YunyangNeural --rate=+5% \
 ffprobe -v quiet -show_entries format=duration -of csv=p=0 assets/narration.mp3
 ```
 
-**Parse SRT for scene timing and captions:**
+**Parse SRT for caption data (Remotion JSON format):**
+
+```bash
+node scripts/srt-to-captions.mjs assets/narration.srt assets/captions-data.json
+```
+
+This generates word-level karaoke data (each word with start/end times, grouped into phrases) for the Remotion caption overlay component.
+
+**SRT parsing for scene timing (python):**
 
 ```python
 def parse_srt(filepath):
@@ -178,355 +186,525 @@ def parse_srt(filepath):
 
 Group SRT entries by script paragraphs for scene timing. With 3 key points per news item, you'll have roughly 3-5 SRT entries per news scene.
 
-**Captions must be 1:1 with SRT entries** — never manually split or estimate timings. Display text may differ from TTS wording (e.g. `AI小儿科` → `aixiaoerke.com`); timings stay 1:1 with SRT:
-```bash
-node scripts/srt-to-captions.mjs assets/narration.srt compositions/caption-overlay.html
-```
-Scene `start`/`end` in GSAP must use the same SRT boundaries (see section 7).
+**Captions must be 1:1 with SRT** — never manually split or estimate timings. Scene `durationInFrames` and caption word timings all derive from SRT parsing.
 
-### 6. Structure the Video
+### 6. Build Composition (Remotion)
 
-**Scene type per news item** — do not use identical layout for every item. See [news-video-patterns.md](references/news-video-patterns.md):
+#### 6.1 Scaffold Project
 
-| Content | Scene type | Badge icon |
-|---------|------------|------------|
-| **3 Key Points (default)** | **Key Points Card** — headline + 3 bullets | icon-product |
-| 2-3 metrics / percentages | **Data Dashboard Card** — counter + ratio bars | icon-data |
-| Notable direct quote | **Quote Card** — quote block + attribution | icon-quote |
-| Before/after comparison | **Comparison Card** — dual progress bars | icon-data |
-| Multi-year trend / prediction | **Timeline Card** — vertical milestone markers | icon-research |
-| One key number (融资, %, 参数量) | Number/Stat Card | — |
-| Opening | Title Card | — |
-| Ending | Closing Card | — |
-
-For most news items, use the **Key Points Card** scene type: badge + headline + 3 animated bullet points (one per key point from the extraction). Each bullet fades/slides in sequentially as the narrator reads them.
-
-**Video structure (example: 5 items with 3 key points each, ~90s):**
-
-| Scene | Content | Duration | From SRT |
-|-------|---------|----------|----------|
-| Scene 1 | Title | ~5-6s | SRT entries 1-3 |
-| Scenes 2-6 | 5 news items (3 KPs each) | 12-20s each | Individual SRT groups |
-| Scene 7 | Closing (CTA) | ~6-10s | Last SRT entries |
-
-**Scene start/duration from SRT (chain to avoid overlaps):**
-```python
-# Group SRT entries per scene, extract first start and last end
-# para_starts: first SRT start time per scene group
-# para_ends: last SRT end time per scene group
-para_starts = [0.1, 5.15, 22.112, ...]  # First SRT entry start per scene
-para_ends   = [5.2, 22.112, 39.787, ...]  # Last SRT entry end per scene
-total_dur = int(para_ends[-1]) + 1
-
-# scene_starts = int() of each scene's first SRT start time
-# (NOT int(prev_end) + 1 — that creates a ~1s gap where audio precedes visuals)
-scene_starts = [0]
-for s in para_starts[1:]:
-    scene_starts.append(int(s))
-
-scene_durs = []
-for i in range(len(scene_starts) - 1):
-    scene_durs.append(scene_starts[i + 1] - scene_starts[i])
-scene_durs.append(total_dur - scene_starts[-1])
-
-### 7. Build Composition
-
-#### 7.1 Initialize Project
+This skill uses **Remotion** (not HyperFrames) for video rendering. Create a Remotion project:
 
 ```bash
 cd /path/to/project
-npx hyperframes init --name "ai-news-video"
-cd ai-news-video
-npm install gsap
-cp node_modules/gsap/dist/gsap.min.js assets/gsap.min.js
+npm init -y
+npm install react react-dom remotion @remotion/cli typescript @types/react @types/node
 ```
 
-#### 7.2 Layout & Design
-
-Read values from `design.md`. Defaults in [design-template.md](references/design-template.md):
-
-- Background: `#0a0a1a`, Accent: `#00d4ff` / `#7c3aed`, Summary: `#b0b0cc`
-- **Persistent `#bg-plate`** inside `#root` — `position:absolute; inset:0; background:#0a0a1a; z-index:0` (not a clip; prevents white flash when scene clips switch)
-- Scene layout: `div.clip.scene` on track 1, `position:absolute; inset:0; 1920×1080; background:#0a0a1a; z-index:1` (**every `.scene` must set background — renderer default is white**)
-- Content: flexbox column, align-items: center, padding `80px 120px`, `overflow:hidden`, `word-break:break-word`
-- Depth layers: `.deco-grid` (background) → `.deco-glow` (mid, hue rotates) → content (foreground)
-- Persistent: `.progress-track` + `.progress-fill` on track 0
-- Counter: top-right `"快讯 N/10"`, 14px, cyan index
-
-**Emphasis in content:** wrap brands and numbers in `<span class="accent">` (`#00d4ff`, weight 700).
-
-**3 Key Points layout:** Use a numbered list or 3 stacked cards:
-
-```html
-<div class="scene-content" id="s2-content">
-  <span class="badge">行业动态</span>
-  <h2 class="headline">NBA Chat 正式上线</h2>
-  <div class="key-points">
-    <div class="kp-item" id="s2-kp1">
-      <span class="kp-num">1</span>
-      <span class="kp-text">NBA中国联手阿里推出首个官方大模型</span>
-    </div>
-    <div class="kp-item" id="s2-kp2">
-      <span class="kp-num">2</span>
-      <span class="kp-text">基于千问模型，融合历史数据与球员分析</span>
-    </div>
-    <div class="kp-item" id="s2-kp3">
-      <span class="kp-num">3</span>
-      <span class="kp-text">文体娱乐成AI大模型落地核心赛道</span>
-    </div>
-  </div>
-</div>
-```
-
-**Layout before animation:** build the hero frame as static CSS first. Use flex on `.scene-content` — reserve `position:absolute` for decoratives only.
-
-**Key points layout — overall centered, list left-aligned (重要):** Scene content (badge, headline) is centered as a whole. The 1.2.3 numbered list block is centered within the scene, but each list item inside is strictly left-aligned (number circle + text). Each `.kp-item` uses flexbox with the number circle on the left and text filling remaining width.
-
-```css
-.scene-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  max-width: 1580px;
-}
-.key-points {
-  text-align: left;
-  width: 100%;
-  max-width: 1100px;
-  margin: 16px auto 0 auto;
-}
-.kp-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 18px;
-  margin-bottom: 18px;
-  width: 100%;
-}
-.kp-num {
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: rgba(0,212,255,0.12);
-  color: #00d4ff;
-  font-size: 18px;
-  font-weight: 700;
-}
-.kp-text {
-  font-size: 30px;
-  color: #e8e8f0;
-  line-height: 1.4;
-  flex: 1;
-  text-align: left;
-}
-```
-
-
-#### 7.3 GSAP Animation Rules
-
-**Load GSAP locally, not from CDN:**
-```html
-<script src="assets/gsap.min.js"></script>
-```
-
-**Never use CSS `opacity: 0`** — use `gsap.set()` or `gsap.fromTo()`.
-
-**Initial scene hide — use `.scene` class only:**
-```javascript
-// CORRECT
-gsap.set(".scene", { opacity: 0 });
-
-// WRONG — matches #scenes-container, #s1-title, #s1-glow, etc. and hides the entire scene track
-gsap.set("[id^='s']", { opacity: 0 });
-```
-
-**Each scene is its own clip** — do not nest all scenes inside one `#scenes-container` div. HyperFrames needs per-scene `data-start` / `data-duration`:
-
-```html
-<div id="s2" class="clip scene" data-track-index="1" data-start="8" data-duration="16">
-  ...
-</div>
-```
-
-GSAP tweens visibility within each scene clip; the renderer shows/hides clips by time.
-
-**Key Points Card scene timeline (standard for deep-dive):**
-
-```javascript
-tl.to("#progress-fill", { scaleX: 1, duration: TOTAL_DURATION, ease: "none" }, 0);
-
-// Ambient: slow glow breathe over scene
-tl.to("#sX-glow", { scale: 1.05, duration: sceneDur, ease: "none" }, sceneStart);
-
-// Standard news scene:
-tl.from("#sX-counter", { x: 40, opacity: 0, duration: 0.4 }, sceneStart + 0.1);
-tl.from("#sX-badge", { scale: 0, opacity: 0, duration: 0.35, ease: "back.out(1.7)" }, sceneStart + 0.2);
-tl.from("#sX-headline", { y: 50, opacity: 0, duration: 0.6, ease: "power3.out" }, sceneStart + 0.5);
-tl.from("#sX-summary", { y: 30, opacity: 0, duration: 0.5, ease: "power2.out" }, sceneStart + 1.1);
-
-// 3 Key Points — staggered animation as narrator reads each one:
-tl.from("#sX-kp1", { x: -30, opacity: 0, duration: 0.5, ease: "power2.out" }, sceneStart + 1.5);
-tl.from("#sX-kp2", { x: -30, opacity: 0, duration: 0.5, ease: "power2.out" }, sceneStart + 5.5);
-tl.from("#sX-kp3", { x: -30, opacity: 0, duration: 0.5, ease: "power2.out" }, sceneStart + 10.5);
-
-// Stat card variant (for data-heavy news):
-tl.from("#sX-stat", { y: 30, scale: 0.5, opacity: 0, duration: 0.7, ease: "expo.out" }, sceneStart + 0.5);
-
-tl.fromTo("#sX", { opacity: 0 }, { opacity: 1, duration: 0.1 }, sceneStart);
-tl.to("#sX", { opacity: 0, duration: 0.3, ease: "power2.in" }, sceneStart + sceneDur - 0.3);
-tl.set("#sX", { opacity: 0 }, sceneStart + sceneDur);
-```
-
-**Animation verbs:**
-
-| Element | Animation | Ease | Notes |
-|---------|-----------|------|-------|
-| Badge | `scale: 0 → 1, rotation: -15→0` | `back.out(2.0)` | Pop-in with overshoot |
-| Headline | `y: 50 → 0` | `power3.out` | Smooth slide-up |
-| Summary | `y: 30 → 0` | `power2.out` | Stagger after headline |
-| Stat number | `y: 30, scale: 0.5 → 1` | `expo.out` | For Number/Stat Card |
-| **Key Point item** | **x: -35 → 0** | **`power3.out`** | **Smooth slide-in, staggered, left-aligned container** |
-| Deco glow | `scale: 1 → 1.08` + opacity pulse 0.12↔0.22 | `sine.inOut, 3s cycle` | Breathing glow over scene |
-| Scene fade-in | `opacity: 0 → 1` | — | 0.1s |
-| Scene fade-out | `opacity: 1 → 0` | `power2.in` | 0.3s before end |
-| Hard kill | `tl.set(id, {opacity:0}, endTime)` | none | Required |
-| Progress bar | `scaleX: 0 → 1` | `none` | Full video |
-
-The 3 key points stagger timing should align with the SRT boundaries for their respective subtitles. Use the SRT parsed timestamps to determine when each point is being narrated.
-
-Register: `window.__timelines["main"] = tl` with `{ paused: true }`.
-
-#### 7.4 Scene Transitions (Mandatory)
-
-No jump cuts. Transitions ARE the exit — do not add separate exit tweens before a transition (except closing).
-
-| From → To | Type | Duration | Ease |
-|-----------|------|----------|------|
-| All scene cuts | Overlapping crossfade + scale 1.02→1 | 0.35s | `power2.inOut` |
-
-**No slide-left transitions** — they expose the white renderer canvas when scenes move off-screen.
-
-```javascript
-var TRANS = 0.35;
-// Incoming starts TRANS before outgoing ends — always one scene visible
-tl.fromTo("#s2", { opacity: 0, scale: 1.02 }, { opacity: 1, scale: 1, duration: TRANS, ease: "power2.inOut" }, s2.start - TRANS);
-tl.to("#s1", { opacity: 0, scale: 0.98, duration: TRANS, ease: "power2.inOut" }, s1.end - TRANS);
-```
-
-Add a persistent `#bg-plate { background: #0a0a1a }` behind all scenes. Do not add per-element exit tweens before crossfade.
-
-**Do not overlap scene clips on the same track** — HyperFrames lint rejects it. GSAP crossfade opacity handles the visual blend; `#bg-plate` covers the brief gap when clips mount/unmount.
-
-Chain clip `data-start` cumulatively — `data-start + data-duration` must equal next scene's `data-start`.
-
-#### 7.5 Karaoke Captions (Standard, natural pacing)
-
-Do **not** use per-scene static `.subtitle` bars. Use a dedicated caption overlay on **track 2**.
-
-Full implementation: [caption-karaoke.md](references/caption-karaoke.md)
-
-```html
-<div id="captions" class="clip"
-     data-track-index="2" data-start="0" data-duration="82"
-     data-composition-id="captions"
-     data-composition-src="compositions/caption-overlay.html">
-</div>
-```
-
-```css
-/* captions must stack above #scenes-container (z-index: 1) */
-#captions { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
-```
-
-Generate captions from SRT (never hand-write timings):
+Or use the template (skip Tailwind, pick Blank):
 ```bash
-node scripts/srt-to-captions.mjs assets/narration.srt compositions/caption-overlay.html
+npx create-video@latest news-video
 ```
 
-Summary:
-- Parse SRT → caption groups (3-5 words / ~4-6 Chinese chars)
-- Karaoke (natural): active word `#00d4ff` + scale 1.08, read 0.5 opacity, unread 0.35
-- Emphasis words (brands, numbers, escalation phrases): scale 1.14 + `.emphasis`
-- `text-shadow` for readability — no opaque background bar
-- Hard kill after every group: `tl.set(groupEl, { opacity: 0, visibility: "hidden" }, group.end)`
-- Run caption self-lint before registering timeline
+#### 6.2 Project Structure
 
-#### 7.6 Fonts
-
-No Google Fonts CDN — fails in headless render. Use `sans-serif` (PingFang SC / Microsoft YaHei).
-
-#### 7.7 Audio Element
-
-```html
-<audio id="narration" class="clip" data-track-index="3"
-       data-start="0" data-duration="82" data-volume="1.0"
-       src="assets/narration.mp3"></audio>
+```
+ai-news-video/
+├── package.json                  # remotion + react deps
+├── tsconfig.json
+├── src/
+│   ├── index.ts                  # registerRoot
+│   ├── Root.tsx                  # Composition registration
+│   ├── styles.ts                 # Shared colors and constants (from design.md)
+│   ├── types.ts                  # Shared TypeScript types
+│   ├── parseCaptionData.ts       # Parse captions-data.json to typed objects
+│   ├── TitleScene.tsx            # Opening title card component
+│   ├── NewsScene.tsx             # News item with 3 key points
+│   ├── ClosingScene.tsx          # Closing / CTA
+│   └── CaptionOverlay.tsx        # Karaoke caption overlay component
+├── assets/
+│   ├── narration.mp3             # TTS audio from edge-tts
+│   └── captions-data.json        # SRT → word-level caption data (from srt-to-captions.mjs)
+├── design.md
+└── .hyperframes/
+    ├── script.txt
+    ├── article-details.md
+    ├── key-points.md
+    └── expanded-prompt.md
 ```
 
-- Must have `id` attribute
-- Direct `src` attribute, not nested `<source>`
-- Different track from scenes (track 3) and captions (track 2)
-- `data-duration` matches total video duration
+#### 6.3 Entry Point & Composition Registration
 
-### 8. Validate & Render
+**src/index.ts:**
+```tsx
+import { registerRoot } from "remotion";
+import { RemotionRoot } from "./Root";
+
+registerRoot(RemotionRoot);
+```
+
+**src/Root.tsx:**
+```tsx
+import { Composition } from "remotion";
+import { NewsVideo } from "./NewsVideo";
+
+// Read from expanded-prompt and SRT for these values
+const TOTAL_DURATION_IN_FRAMES = Math.ceil(82 * 30); // 82 seconds × 30fps
+const FPS = 30;
+
+export const RemotionRoot: React.FC = () => {
+  return (
+    <Composition
+      id="NewsVideo"
+      component={NewsVideo as React.FC<Record<string, unknown>>}
+      durationInFrames={TOTAL_DURATION_IN_FRAMES}
+      fps={FPS}
+      width={1920}
+      height={1080}
+    />
+  );
+};
+```
+
+#### 6.4 Shared Styles
+
+**src/styles.ts:**
+```ts
+// Design-system constants — match design.md exactly
+export const COLORS = {
+  bg: "#0a0a1a",
+  surfaceLight: "rgba(255,255,255,0.08)",
+  surfaceMed: "rgba(255,255,255,0.05)",
+  primaryText: "#ffffff",
+  summaryText: "#b0b0cc",
+  accent: "#00d4ff",
+  accentPurple: "#7c3aed",
+  accentEmerald: "#10b981",
+  accentAmber: "#f59e0b",
+  accentRose: "#f43f5e",
+  captionBg: "rgba(0,0,0,0.72)",
+};
+
+// Glow rotation per news scene (cycle in order)
+export const GLOW_HUES = [
+  "#00d4ff", "#7c3aed", "#3b82f6", "#10b981", "#f59e0b", "#f43f5e",
+];
+```
+
+#### 6.5 Scene Components
+
+Each scene is a React component that receives:
+- `frame`: current frame number (from `useCurrentFrame()`)
+- `fps`: frames per second
+- Scene-specific content (headline, key points, badge text)
+- Scene timing (start frame)
+
+**TitleScene.tsx:**
+```tsx
+import { AbsoluteFill, useCurrentFrame, interpolate, spring } from "remotion";
+
+const S = {
+  root: { backgroundColor: "#0a0a1a" as const, justifyContent: "center" as const, alignItems: "center" as const },
+  hero: { fontFamily: "sans-serif" as const, fontWeight: 800, fontSize: 72, color: "#ffffff", margin: 0, textAlign: "center" as const },
+  sub: { fontFamily: "sans-serif" as const, fontWeight: 400, fontSize: 28, color: "#b0b0cc", marginTop: 24, textAlign: "center" as const },
+};
+
+export const TitleScene: React.FC<{ sceneStart: number }> = ({ sceneStart }) => {
+  const frame = useCurrentFrame();
+  const fps = 30;
+  const localFrame = frame - sceneStart;
+
+  const heroOpacity = interpolate(localFrame, [5, 25], [0, 1], { extrapolateLeft: "clamp" });
+  const heroY = interpolate(localFrame, [5, 25], [40, 0], { extrapolateLeft: "clamp" });
+  const subOpacity = interpolate(localFrame, [20, 40], [0, 1], { extrapolateLeft: "clamp" });
+  const glowScale = spring({ frame: localFrame, fps, config: { damping: 12 } });
+
+  return (
+    <AbsoluteFill style={S.root}>
+      {/* Decorative glow */}
+      <div style={{
+        position: "absolute", inset: 0,
+        background: "radial-gradient(circle, rgba(0,212,255,0.10) 0%, transparent 60%)",
+        transform: `scale(${0.9 + glowScale * 0.1}) opacity ${0.6 + glowScale * 0.4}`,
+      }} />
+      {/* Content */}
+      <h1 style={{ ...S.hero, opacity: heroOpacity, transform: `translateY(${heroY}px)` }}>
+        AI 资讯速递
+      </h1>
+      <p style={{ ...S.sub, opacity: subOpacity }}>
+        今日AI动态速览
+      </p>
+    </AbsoluteFill>
+  );
+};
+```
+
+**NewsScene.tsx (Key Points Card — the main scene type):**
+```tsx
+import { AbsoluteFill, useCurrentFrame, interpolate } from "remotion";
+import { COLORS } from "./styles";
+
+interface NewsSceneProps {
+  sceneStart: number;
+  badgeText: string;
+  headline: string;
+  keyPoints: string[];
+  glowColor: string;
+  // Optional: rich visual elements
+  statValue?: string;
+  statLabel?: string;
+  ratioBarLabel?: string;
+  ratioBarValue?: string;
+  ratioBarWidth?: number;
+}
+
+const countIn = (f: number, s: number, d: number) =>
+  interpolate(f, [s, s + d], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+const slideIn = (f: number, s: number, d: number, dist = 30) => ({
+  opacity: countIn(f, s, d),
+  transform: `translateY(${interpolate(f, [s, s + d], [dist, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" })}px)`,
+});
+
+export const NewsScene: React.FC<NewsSceneProps> = ({
+  sceneStart, badgeText, headline, keyPoints, glowColor,
+}) => {
+  const frame = useCurrentFrame();
+  const f = frame - sceneStart;
+
+  return (
+    <AbsoluteFill style={{ backgroundColor: COLORS.bg, justifyContent: "center", alignItems: "center", padding: "80px 120px" }}>
+      {/* Glow */}
+      <div style={{
+        position: "absolute", bottom: "5%", left: "50%", transform: "translateX(-50%)",
+        width: 600, height: 600, borderRadius: "50%",
+        background: `radial-gradient(circle, ${glowColor}15 0%, transparent 60%)`,
+        filter: "blur(50px)",
+      }} />
+      {/* Badge */}
+      <span style={{
+        ...slideIn(f, 2, 15, 10),
+        padding: "8px 20px", fontSize: 14, fontWeight: 700, borderRadius: 20,
+        background: "rgba(255,255,255,0.08)", color: glowColor, letterSpacing: "0.1em",
+        textTransform: "uppercase",
+      }}>
+        {badgeText}
+      </span>
+      {/* Headline */}
+      <h2 style={{
+        fontFamily: "sans-serif", fontWeight: 700, fontSize: 48, color: COLORS.primaryText,
+        margin: "16px 0 0 0", textAlign: "center", maxWidth: 1400,
+        ...slideIn(f, 8, 20),
+      }}>
+        {headline}
+      </h2>
+      {/* Key Points (3 animated bullets) */}
+      <div style={{ marginTop: 40, maxWidth: 1100, width: "100%" }}>
+        {keyPoints.map((kp, i) => {
+          const kpStart = 20 + i * 180; // ~6 seconds apart at 30fps
+          return (
+            <div key={i} style={{
+              display: "flex", alignItems: "flex-start", gap: 16, marginBottom: 20,
+              ...slideIn(f, kpStart, 16, 35),
+            }}>
+              <span style={{
+                flexShrink: 0, width: 36, height: 36, borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 18, fontWeight: 700, color: glowColor,
+                background: `${glowColor}20`,
+              }}>
+                {i + 1}
+              </span>
+              <span style={{
+                fontFamily: "sans-serif", fontSize: 28, fontWeight: 400,
+                lineHeight: 1.5, color: COLORS.primaryText, flex: 1,
+              }}>
+                {kp}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </AbsoluteFill>
+  );
+};
+```
+
+**ClosingScene.tsx:**
+```tsx
+import { AbsoluteFill, useCurrentFrame, interpolate } from "remotion";
+import { COLORS } from "./styles";
+
+export const ClosingScene: React.FC<{ sceneStart: number }> = ({ sceneStart }) => {
+  const frame = useCurrentFrame();
+  const f = frame - sceneStart;
+  const opacity = interpolate(f, [0, 20, 80, 100], [0, 1, 1, 0], { extrapolateLeft: "clamp" });
+
+  return (
+    <AbsoluteFill style={{
+      backgroundColor: COLORS.bg, justifyContent: "center", alignItems: "center",
+      opacity,
+    }}>
+      <div style={{ textAlign: "center" }}>
+        <p style={{ fontFamily: "sans-serif", fontWeight: 300, fontSize: 24, color: COLORS.summaryText, letterSpacing: "0.1em" }}>
+          MADE WITH
+        </p>
+        <h1 style={{
+          fontFamily: "sans-serif", fontWeight: 900, fontSize: 72,
+          background: `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.accentPurple})`,
+          WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+          margin: "16px 0",
+        }}>
+          Remotion
+        </h1>
+        <div style={{ width: 120, height: 2, background: COLORS.accent, margin: "24px auto", opacity: 0.6 }} />
+        <p style={{ fontFamily: "sans-serif", fontSize: 28, fontWeight: 600, color: COLORS.accent }}>
+          aixiaoerke.com
+        </p>
+      </div>
+    </AbsoluteFill>
+  );
+};
+```
+
+#### 6.6 Data & Scene Timing
+
+Pass parsed news data into the main composition. Use a data file or inline scene definitions derived from `key-points.md` and SRT timings.
+
+**src/sceneData.ts (generated per video):**
+```ts
+export interface SceneData {
+  type: "title" | "news" | "closing";
+  startFrame: number;
+  durationInFrames: number;
+  badgeText?: string;
+  headline?: string;
+  keyPoints?: string[];
+  glowColor?: string;
+}
+
+// Read from expanded-prompt.md and SRT parsing
+// Each news scene uses ~12-20 seconds (360-600 frames at 30fps)
+export const SCENES: SceneData[] = [
+  {
+    type: "title", startFrame: 0, durationInFrames: 150,
+  },
+  {
+    type: "news", startFrame: 150, durationInFrames: 480,
+    badgeText: "行业动态", headline: "NBA Chat 正式上线",
+    keyPoints: [
+      "NBA中国联手阿里推出首个官方大模型",
+      "基于千问模型，融合历史数据与球员分析",
+      "文体娱乐成AI大模型落地核心赛道",
+    ],
+    glowColor: "#00d4ff",
+  },
+  // ... more news scenes ...
+  {
+    type: "closing", startFrame: 2460, durationInFrames: 150,
+  },
+];
+```
+
+#### 6.7 Main Composition (NewsVideo.tsx)
+
+```tsx
+import { AbsoluteFill, Sequence, useCurrentFrame, useVideoConfig } from "remotion";
+import { TitleScene } from "./TitleScene";
+import { NewsScene } from "./NewsScene";
+import { ClosingScene } from "./ClosingScene";
+import { CaptionOverlay } from "./CaptionOverlay";
+import { SCENES } from "./sceneData";
+
+export const NewsVideo: React.FC = () => {
+  return (
+    <AbsoluteFill>
+      {/* Scene track */}
+      {SCENES.map((scene) => {
+        if (scene.type === "title") {
+          return (
+            <Sequence from={scene.startFrame} durationInFrames={scene.durationInFrames}>
+              <TitleScene sceneStart={scene.startFrame} />
+            </Sequence>
+          );
+        }
+        if (scene.type === "news") {
+          return (
+            <Sequence from={scene.startFrame} durationInFrames={scene.durationInFrames}>
+              <NewsScene
+                sceneStart={scene.startFrame}
+                badgeText={scene.badgeText!}
+                headline={scene.headline!}
+                keyPoints={scene.keyPoints!}
+                glowColor={scene.glowColor!}
+              />
+            </Sequence>
+          );
+        }
+        if (scene.type === "closing") {
+          return (
+            <Sequence from={scene.startFrame} durationInFrames={scene.durationInFrames}>
+              <ClosingScene sceneStart={scene.startFrame} />
+            </Sequence>
+          );
+        }
+        return null;
+      })}
+      {/* Caption overlay — always visible */}
+      <Sequence from={0} durationInFrames={SCENES[SCENES.length - 1].startFrame + SCENES[SCENES.length - 1].durationInFrames}>
+        <CaptionOverlay />
+      </Sequence>
+      {/* Audio */}
+      <Sequence from={0} durationInFrames={SCENES[SCENES.length - 1].startFrame + SCENES[SCENES.length - 1].durationInFrames}>
+        <audio src="/assets/narration.mp3" />
+      </Sequence>
+    </AbsoluteFill>
+  );
+};
+```
+
+#### 6.8 Caption Overlay (Karaoke)
+
+The caption overlay component reads the `captions-data.json` (generated by `srt-to-captions.mjs`) and renders karaoke-style subtitles synced to the narration.
+
+**src/CaptionOverlay.tsx:**
+```tsx
+import { useCurrentFrame, useVideoConfig, interpolate } from "remotion";
+import captionData from "../assets/captions-data.json";
+
+interface CaptionWord {
+  idx: number;
+  start: number;
+  end: number;
+  text: string;
+}
+
+interface CaptionGroup {
+  id: number;
+  start: number;
+  end: number;
+  text: string;
+  words: CaptionWord[];
+}
+
+const groups = captionData as CaptionGroup[];
+const JSON_FPS = 30;
+
+export const CaptionOverlay: React.FC = () => {
+  const frame = useCurrentFrame();
+  const time = frame / JSON_FPS;
+
+  // Find active caption group
+  const activeGroup = groups.find((g) => time >= g.start && time <= g.end);
+
+  if (!activeGroup) return null;
+
+  return (
+    <div style={{
+      position: "absolute", bottom: 80, left: 0, right: 0,
+      pointerEvents: "none", zIndex: 20,
+      display: "flex", justifyContent: "center",
+    }}>
+      <div style={{
+        maxWidth: 1600, width: "90%", textAlign: "center",
+        padding: "12px 28px",
+        background: "rgba(0,0,0,0.72)",
+        borderRadius: 8,
+        border: "1px solid rgba(255,255,255,0.1)",
+      }}>
+        {activeGroup.words.map((word: CaptionWord) => {
+          const isActive = time >= word.start && time <= word.end;
+          const isRead = time > word.end;
+          const opacity = isRead ? 0.5 : isActive ? 1 : 0.35;
+          const color = isActive ? "#00d4ff" : "#e8e8f0";
+          const scale = isActive ? 1.08 : 1;
+          const isEmphasis = /[0-9]/.test(word.text);
+
+          return (
+            <span
+              key={word.idx}
+              style={{
+                fontFamily: "sans-serif", fontSize: 32, fontWeight: 600,
+                color, opacity,
+                transform: `scale(${scale})`,
+                display: "inline-block",
+                transition: "opacity 0.05s, transform 0.05s",
+                textShadow: isActive
+                  ? "0 0 12px rgba(0,212,255,0.5), 0 2px 8px rgba(0,0,0,0.8)"
+                  : "0 1px 4px rgba(0,0,0,0.9)",
+                lineHeight: 1.5,
+              }}
+            >
+              {word.text}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+```
+
+**Important:** The `captions-data.json` file must be imported in a TypeScript project. Add the following to `tsconfig.json` to allow JSON imports:
+```json
+{
+  "compilerOptions": {
+    "resolveJsonModule": true,
+    "esModuleInterop": true
+  }
+}
+```
+
+#### 6.9 Audio
+
+Remotion handles audio natively with the `<Audio>` element. Place it in the main composition (see NewsVideo.tsx above).
+
+- Audio must be in a `<Sequence>` span that covers the entire video duration
+- Use a mp3 file from edge-tts output
+- Remotion will automatically seek the audio to match the rendered frame, so no manual `data-start` / `data-duration` attributes needed
+
+### 7. Validate & Render
 
 ```bash
-npx hyperframes lint
-npx hyperframes validate
-npx hyperframes inspect --samples 10
+# Check available compositions
+npx remotion compositions
 
-npx hyperframes render --output output.mp4
+# Render the video
+npx remotion render NewsVideo output.mp4
 
-ffmpeg -y -i output.mp4 -ss 5 -vframes 1 -update true /tmp/frame.jpg
-ls -la /tmp/frame.jpg  # should be > 30KB
+# For faster iteration, render a test segment:
+npx remotion render NewsVideo test-segment.mp4 --frames=0-149
 ```
 
 **Checklist:**
-- [ ] `design.md` exists and all colors match
+- [ ] `design.md` exists and all colors match the output
 - [ ] `key-points.md` exists with 3 points filled per article
-- [ ] `.hyperframes/expanded-prompt.md` written with 3KP scene types
-- [ ] Scene types vary (KP Card, Data Dashboard, Comparison, Quote, Timeline, Stat Card)
-- [ ] 3 key points animated sequentially, staggered by SRT timing
-- [ ] Transitions between every scene — no jump cuts
-- [ ] Karaoke captions on track 2, synced to SRT
-- [ ] Caption self-lint passes
-- [ ] Hard kills on all scenes and caption groups
-- [ ] Rich visual elements used (data counter, ratio bars, quotes, timeline) when appropriate
-- [ ] Badge icon classes applied per scene type
-- [ ] Text fits without overflow
+- [ ] `.hyperframes/expanded-prompt.md` written with 3KP scene assignments
+- [ ] Scene types vary (Key Points Card, Data Dashboard, Comparison, Quote, Timeline, Stat Card)
+- [ ] 3 key points animated sequentially, staggered to match narration timing
+- [ ] Transitions between every scene — use `interpolate()` opacity transitions at scene boundaries
+- [ ] Karaoke captions synced to SRT word timings
+- [ ] Caption overlay has dark background (`rgba(0,0,0,0.72)`) for readability
+- [ ] Emphasis words (brands, numbers) get accent color treatment
+- [ ] Audio plays correctly: `assets/narration.mp3` present and referenced in `<audio>` element
+- [ ] Text fits within 1920×1080 frame (no overflow)
+- [ ] Final render completes: `npx remotion render NewsVideo output.mp4`
 
-### 9. Known Issues & Fixes
+### 8. Known Issues & Fixes
 
 | Issue | Symptom | Fix |
 |-------|---------|-----|
-| GSAP CDN failure | Black video, audio only | Install GSAP locally, copy to `assets/` |
-| CSS `opacity: 0` | Elements invisible | Use `gsap.set()` or `gsap.fromTo()` |
-| Text overflow | Text beyond 1920×1080 | `fitTextFontSize()`, reduce sizes, `word-break` |
-| Clip track overlap | Incorrect render | Chain scene starts; start+duration=next_start |
-| Audio not playing | Silent video | `id="narration"`, direct `src` |
-| Font loading fails | Tofu characters | `sans-serif`, no Google Fonts |
+| Remotion not found | Command error | `npm install remotion @remotion/cli` |
+| Composition not found | "No composition named NewsVideo" | Check `src/Root.tsx` Composition ID spelling |
+| JSON import error | "Cannot find module" | Add `resolveJsonModule: true` to tsconfig.json |
+| Text overflow | Text beyond 1920×1080 | Reduce font sizes, use `maxWidth`, reduce padding |
+| Audio not playing | Silent video | Ensure `assets/narration.mp3` exists, use `<audio>` in Sequence |
+| Font issues | Tofu characters in Chinese text | Use `sans-serif` font-family (system fonts work) |
 | edge-tts not found | Command error | `pip install edge-tts` |
 | edge-tts network error | Timeout | Check internet / Microsoft API access |
-| Ghost captions | Text lingers after phrase | Hard kill + caption self-lint |
-| Static subtitle bar | Blocks visuals, out of sync | Use karaoke overlay (section 7.5) |
-| Inconsistent style | Each video looks different | Use `design.md` + expanded-prompt |
-| `[id^='s']` gsap.set | White/blank video, captions only | Use `gsap.set(".scene", {opacity:0})` only |
-| All scenes in one container | Scenes never render | Each `.scene` is its own `clip` with timing attrs |
-| White text on white bg | Headlines invisible | `background:#0a0a1a` on every `.scene` + `text-shadow` on headlines |
-| Subtitles out of sync | Captions don't match audio | Run `srt-to-captions.mjs` — 1:1 with SRT, never manual splits |
-| White flash on cut | Blank frame between scenes | `#bg-plate` + overlapping crossfade, no slide-left |
-| Kokoro TTS garbled | Broken Chinese | Use edge-tts instead |
-| macOS `say` spells English | Letter-by-letter | Use edge-tts or Chinese equivalents |
-| Key points not aligned with narration | Visual bullet lags behind/leads audio | Align KP stagger times with SRT entry timestamps for each key point |
-| Key points overflow | 3 bullets exceed scene height | Reduce font sizes, use `.kp-text { font-size: 28px }`, reduce padding |
-| Audio precedes scene | Narration starts before scene title/KPs appear | Use `int(srt_start)` not `int(prev_end) + 1` for scene `data-start` |
-| IDs missing for detail fetch | Can't get full content | Note IDs from `fetch-news.mjs` output; use `--json` flag for cleaner parsing |
-| Flat narration | Sounds like neutral news reading | Ensure natural flow without excessive drama; use `zh-CN-YunyangNeural --rate=+5%` |
-| Domain in TTS script | edge-tts spells `aixiaoerke.com` letter-by-letter | Closing script: `可访问AI小儿科`; captions/HTML: `aixiaoerke.com` |
+| Inconsistent style | Each video looks different | Use `design.md` + expanded-prompt consistently |
+| Captions out of sync | Karaoke doesn't match audio | Re-run `srt-to-captions.mjs` — timings are 1:1 with SRT |
+| Scene transition no crossfade | Jump cuts between scenes | Add opacity fade-in at start of each scene component |
+| White flash on render | Brief white frames | Set explicit `backgroundColor` on all `AbsoluteFill` containers |
+| Caption data not reimporting | Stale timings | `captions-data.json` must be rebuilt after TTS changes |
 
 ### Content Refresh
 
@@ -536,9 +714,9 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 4. Fill in the 3 key points in `key-points.md` (read full content per article)
 5. Rewrite `.hyperframes/script.txt` and update `.hyperframes/expanded-prompt.md`
 6. TTS + SRT: `edge-tts --voice zh-CN-YunyangNeural --rate=+5% -f .hyperframes/script.txt --write-media assets/narration.mp3 --write-subtitles assets/narration.srt`
-7. Parse SRT → scene timing + caption groups
-8. Regenerate HTML (keep `design.md` unchanged for style consistency)
-9. Re-render: `npx hyperframes render --output ai-news-new.mp4`
+7. Parse SRT → caption data: `node scripts/srt-to-captions.mjs assets/narration.srt assets/captions-data.json`
+8. Update scene data in `src/sceneData.ts` (headlines, key points, glow colors, timings)
+9. Re-render: `npx remotion render NewsVideo ai-news-new.mp4`
 
 ## References
 
@@ -547,10 +725,9 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 | [scripts/fetch-news.mjs](scripts/fetch-news.mjs) | Fetch article list from API |
 | [scripts/fetch-detail.mjs](scripts/fetch-detail.mjs) | Fetch full detail for selected articles by ID |
 | [scripts/extract-key-points.mjs](scripts/extract-key-points.mjs) | Structure article content for 3-key-point extraction |
-| [scripts/srt-to-captions.mjs](scripts/srt-to-captions.mjs) | Generate caption overlay from SRT |
+| [scripts/srt-to-captions.mjs](scripts/srt-to-captions.mjs) | Parse SRT → word-level `captions-data.json` for Remotion |
 | [design-template.md](references/design-template.md) | Copy to `design.md` — palette, typography, motion |
 | [expanded-prompt-template.md](references/expanded-prompt-template.md) | Mandatory pre-build production plan |
-| [caption-karaoke.md](references/caption-karaoke.md) | Karaoke subtitle overlay implementation |
 | [news-video-patterns.md](references/news-video-patterns.md) | Scene types, timing, color approach |
 | [workflow.md](references/workflow.md) | Extended workflow guide |
 | [site-api.md](references/site-api.md) | News API reference |
