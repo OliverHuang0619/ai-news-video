@@ -16,8 +16,10 @@ Read HyperFrames `references/captions.md` and `references/dynamic-techniques.md`
 ## Pipeline
 
 ```
-edge-tts → narration.srt → parse entries → group words → caption-overlay.html → track 2
+edge-tts → narration.srt → parse entries → display-text map → caption-overlay.html → track 2
 ```
+
+**Display-text map:** TTS script uses spoken brand「AI小儿科」in the closing; `srt-to-captions.mjs` replaces it with `aixiaoerke.com` in caption divs. Timings stay 1:1 with SRT.
 
 ### 1. Generate SRT
 
@@ -150,7 +152,7 @@ In `index.html`, add a composition clip on **track 2** (separate from scenes on 
 
 Do **not** use `left: 50%; transform: translateX(-50%)` on the group — causes edge clipping. Use full-width + `text-align: center`.
 
-### 7. GSAP timeline (medium-high energy)
+### 7. GSAP timeline (natural pacing)
 
 ```javascript
 var tl = gsap.timeline({ paused: true });

@@ -79,10 +79,11 @@ Read:
 - **Mood:** Warm sign-off
 - **Transition in:** fade from dark 0.6s
 - **Verbs:** site URL fade, CTA fade, logo scale
-- **Content:** "了解更多资讯，可访问aixiaoerke.com"
+- **On-screen content:** `aixiaoerke.com` (closing card URL text)
+- **TTS script:** `可访问AI小儿科` (spoken brand; captions auto-map to domain)
 
 ## Caption Plan
-- Overlay: karaoke medium-high on track 2
+- Overlay: karaoke (natural pacing) on track 2
 - Group size: 3–5 words / ~4–6 Chinese chars
 - Emphasis: [list brand names and stats from key points]
 

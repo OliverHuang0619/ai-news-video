@@ -62,8 +62,13 @@ Take the selected news and write a narration script in `.hyperframes/script.txt`
 
 ...
 
-[CLOSING] 以上就是今天的AI资讯，感谢收看！了解更多资讯，可访问aixiaoerke.com，我们下期再见！
+[CLOSING] 以上就是今天的AI资讯，感谢收看！了解更多资讯，可访问AI小儿科，我们下期再见！
 ```
+
+**Brand naming split (mandatory):**
+- **TTS / `script.txt`:** closing always uses spoken brand **「可访问AI小儿科」** (never the domain — edge-tts reads it poorly).
+- **On-screen:** closing scene URL and all other visible copy stay **`aixiaoerke.com`**.
+- **Captions:** `srt-to-captions.mjs` auto-replaces `AI小儿科` → `aixiaoerke.com` in subtitle text; SRT timings unchanged.
 
 **Example — 3-point narration for one news item (~15-20 chars/point, ~48-60 chars total):**
 > NBA中国联手阿里巴巴推出首个官方大模型NBA Chat。 / 基于千问大模型融合了历史数据与球员分析。 / 文体娱乐正成为大模型落地核心竞技场。
@@ -78,7 +83,7 @@ List brand names and numbers in `.hyperframes/emphasis.txt` for caption styling.
 [NEWS 1] 首先，NBA中国联手阿里巴巴推出了首个官方大模型"NBA Chat"…
 [NEWS 2] 另一条重要消息，中国将首发公有云大模型Token性能榜…
 [NEWS 3] …
-[CLOSING] 以上就是今天的AI资讯，感谢收看！了解更多资讯，可访问aixiaoerke.com，我们下期再见！
+[CLOSING] 以上就是今天的AI资讯，感谢收看！了解更多资讯，可访问AI小儿科，我们下期再见！
 ```
 
 List brand names and numbers in `.hyperframes/emphasis.txt` for caption styling.
@@ -208,7 +213,7 @@ The transition IS the exit. Do not add separate exit tweens before a transition.
 
 Build `compositions/caption-overlay.html` on **track 2**. Full spec: [caption-karaoke.md](caption-karaoke.md).
 
-- Medium-high energy karaoke
+- Natural karaoke (clear pacing)
 - SRT-driven word highlighting
 - Emphasis on brands/numbers
 - Hard kill + self-lint per group

@@ -5,7 +5,7 @@ Copy this file to the project root as `design.md` before building any compositio
 ## Channel Identity
 
 - **Name:** AI 资讯速递
-- **Mood:** Dark tech, energetic, trustworthy
+- **Mood:** Dark tech, clear, trustworthy
 - **Audience:** Chinese-speaking AI industry followers
 - **Platform:** 1920×1080 landscape, social + short-form
 
@@ -183,15 +183,24 @@ Usage: `<span class="badge icon-data">行业数据</span>`
 
 ## Scene Background (Non-Negotiable)
 
-HyperFrames headless render defaults to a **white canvas**. `body { background: #0a0a1a }` alone is not enough.
+HyperFrames headless render defaults to a **white canvas**. `body { background: #0a0a1a }` alone is not enough — scene clips mount/unmount by time, so a gap between clips flashes white.
 
-```css
-.scene {
-  background: #0a0a1a; /* required on every scene clip */
-}
+**Always add a persistent `#bg-plate` behind all scenes** (not a clip — always rendered):
+
+```html
+<div id="root" ...>
+  <div id="bg-plate"></div>
+  <!-- progress, scenes, captions, audio -->
+</div>
 ```
 
-Without it, white headline text (`#ffffff`) is invisible on the default white canvas.
+```css
+#root { position: relative; width: 1920px; height: 1080px; }
+#bg-plate { position: absolute; inset: 0; background: #0a0a1a; z-index: 0; }
+.scene { background: #0a0a1a; z-index: 1; /* required on every scene clip */ }
+```
+
+Without `#bg-plate` + `.scene` background, crossfades between news items flash white for 1–2 frames.
 
 ## Scene Skeleton (fixed across all videos)
 
@@ -207,6 +216,49 @@ Every video uses the same structural template. Only content and visual elements 
 1. Background: `.deco-grid` or `.deco-dots` (slow drift)
 2. Mid: `.deco-glow` (radial gradient, scene-specific hue)
 3. Foreground: content stack (badge → headline → visual elements)
+
+### Key Points Layout (Left-Aligned)
+
+All numbered key-point lists (1. 2. 3.) must be left-aligned, not centered. Add these CSS rules:
+
+```css
+.key-points {
+  text-align: left;
+  width: 100%;
+  max-width: 1100px;
+  margin: 16px 0 0 0;
+}
+.kp-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 18px;
+  width: 100%;
+}
+.kp-num {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0,212,255,0.12);
+  color: #00d4ff;
+  font-size: 18px;
+  font-weight: 700;
+}
+.kp-text {
+  font-size: 30px;
+  color: #e8e8f0;
+  line-height: 1.4;
+  flex: 1;
+  text-align: left;
+}
+```
+
+The number circle is fixed-width and the text fills remaining width, creating a clean left-aligned vertical list.
+
 
 ## Motion Character
 
@@ -252,7 +304,7 @@ For data-rich articles, combine multiple visual elements:
 
 ## Caption Style (karaoke overlay)
 
-- Energy level: **medium-high** (news broadcast)
+- Energy level: **natural** (clear news reading)
 - Position: bottom 100px, full-width centered container
 - Active word: `#00d4ff`, scale 1.08
 - Read words: opacity 0.5

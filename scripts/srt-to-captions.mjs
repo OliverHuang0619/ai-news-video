@@ -42,7 +42,15 @@ function esc(s) {
     .replace(/"/g, "&quot;");
 }
 
-const entries = parseSrt(readFileSync(srtPath, "utf8"));
+/** TTS script uses spoken brand「AI小儿科」; on-screen captions show the site URL. */
+function toDisplayText(text) {
+  return text.replace(/AI\s*小儿科/g, "aixiaoerke.com");
+}
+
+const entries = parseSrt(readFileSync(srtPath, "utf8")).map((e) => ({
+  ...e,
+  text: toDisplayText(e.text),
+}));
 
 const captionDivs = entries
   .map(

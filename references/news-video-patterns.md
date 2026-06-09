@@ -87,6 +87,15 @@ Headline + 3 animated bullet points extracted from the full article content. Thi
 </div>
 ```
 
+**Left-aligned layout:** All numbered key points must be left-aligned (not centered). Add these CSS rules:
+
+```css
+.key-points { text-align: left; width: 100%; max-width: 1100px; margin: 16px 0 0 0; }
+.kp-item { display: flex; align-items: flex-start; gap: 18px; margin-bottom: 18px; width: 100%; }
+.kp-num { flex-shrink: 0; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(0,212,255,0.12); color: #00d4ff; font-size: 18px; font-weight: 700; }
+.kp-text { font-size: 30px; color: #e8e8f0; line-height: 1.4; flex: 1; text-align: left; }
+```
+
 ### 5. Data Dashboard Card — NEW
 
 Designed for data-heavy articles: large animated number + progress bars + supporting stats all on one screen. Best for stories with 2+ metrics or percentages.
@@ -258,7 +267,8 @@ Call to action and channel branding. Always include the site URL.
 
 **Elements:**
 - "Thanks for watching" or follow CTA
-- Site URL: "了解更多资讯，可访问aixiaoerke.com"
+- Site URL on screen: `aixiaoerke.com` (large accent text in closing scene HTML)
+- TTS audio says **「可访问AI小儿科」** in `script.txt` — not the domain; captions show `aixiaoerke.com` via `srt-to-captions.mjs`
 - Channel logo/name
 - Decorative: fade to dark
 

@@ -1,11 +1,11 @@
 ---
 name: ai-news-video
-description: "Use when asked to turn aixiaoerke.com AI news into short HyperFrames videos, daily or weekly AI news briefings, narrated video summaries from news headlines, or energetic Chinese AI news videos with passionate voiceover."
+description: "Use when asked to turn aixiaoerke.com AI news into short HyperFrames videos, daily or weekly AI news briefings, narrated video summaries from news headlines."
 ---
 
 # AI News Video
 
-Turn AI news articles from aixiaoerke.com into short, high-energy Chinese videos using HyperFrames. The default style is passionate but credible: punchy hooks, rising cadence, clear stakes, and motion/captions that amplify the narrator instead of flattening into neutral news reading.
+Turn AI news articles from aixiaoerke.com into short news briefings using HyperFrames. The default style is clear and credible: natural narration, well-structured key points, and motion/captions that support understanding.
 
 ## Quick Start
 
@@ -15,7 +15,7 @@ Turn AI news articles from aixiaoerke.com into short, high-energy Chinese videos
 4. **Write a narration script:** each news item covers its 3 key points
 5. **Establish design:** copy [design-template.md](references/design-template.md) → `design.md`
 6. **Expand prompt:** write `.hyperframes/expanded-prompt.md` (see [expanded-prompt-template.md](references/expanded-prompt-template.md))
-7. **Generate energetic audio** using `edge-tts` with `zh-CN-YunjianNeural`
+7. **Generate audio** using `edge-tts` with `zh-CN-YunyangNeural`
 8. **Parse SRT** for scene timing + caption groups
 9. **Build composition** — scenes on track 1, karaoke captions on track 2, audio on track 3
 10. **Validate:** `npx hyperframes lint && npx hyperframes validate && npx hyperframes inspect --samples 10`
@@ -71,13 +71,13 @@ Fill the 3 points directly in `key-points.md`. Each point should be **15-25 Chin
 
 **Why extract 3 points?** — A single headline is too shallow for viewer engagement; the full summary is too long for on-screen text. Three structured points give the right depth: core fact, concrete data, and broader meaning.
 
-### 2. Write Passionate Narration Script
+### 2. Write Narration Script
 
 Write the script in `.hyperframes/script.txt`. Use pure Chinese text — no English words needed since edge-tts handles Chinese natively.
 
-**Tone target:** energetic tech commentator, not calm anchor. Every item should answer: "what just happened, why is it exciting, what changes next?" Use short punchy sentences, action verbs, contrast, stakes, and one clear escalation phrase. Avoid hype that invents facts.
+**Tone target:** clear tech commentator, natural and credible. Every item should cover: "what happened, why it matters, what changes next?" Use straightforward sentences, supporting data, and logical flow. Avoid hype or invented drama.
 
-**Narration pace:** edge-tts `zh-CN-YunjianNeural` at `--rate=+15%` speaks with sports/novel energy. With 3 key points per news item, each paragraph should be **45-70 chars** (12-18 seconds): fast enough to feel urgent, still clear enough for karaoke captions.
+**Narration pace:** edge-tts `zh-CN-YunyangNeural` at `--rate=+5%` speaks with clear, natural pacing. With 3 key points per news item, each paragraph should be **45-70 chars** (12-18 seconds): fast enough to feel urgent, still clear enough for karaoke captions.
 
 **Script structure:**
 
@@ -92,10 +92,18 @@ Write the script in `.hyperframes/script.txt`. Use pure Chinese text — no Engl
 
 ...
 
-[CLOSING] 这就是今天最值得盯住的AI动态。了解更多资讯可访问aixiaoerke.com，我们下期继续追！
+[CLOSING] 这就是今天最值得盯住的AI动态。了解更多资讯可访问AI小儿科，我们下期继续追！
 ```
 
-**High-energy 3-point example:**
+**TTS vs on-screen brand (fixed rule):** Closing narration in `script.txt` always says **「可访问AI小儿科」** — edge-tts pronounces the Chinese brand name cleanly. **Subtitles and scene HTML** always show **`aixiaoerke.com`** (closing card URL, CTA copy). `srt-to-captions.mjs` maps `AI小儿科` → `aixiaoerke.com` in caption text automatically; do not put the domain in `script.txt`.
+
+| Layer | Closing site reference |
+|-------|------------------------|
+| `script.txt` / audio | `可访问AI小儿科` |
+| SRT → captions | `aixiaoerke.com` (auto-mapped) |
+| Closing scene HTML | `aixiaoerke.com` |
+
+**Natural 3-point example:**
 > NBA中国直接把AI带进赛场！NBA Chat由阿里千问驱动，融合历史数据和球员分析。更关键的是，体育娱乐正在变成大模型落地的新战场。
 
 Mark emphasis words in a sidecar `.hyperframes/emphasis.txt` (brand names, numbers) for caption styling.
@@ -129,10 +137,10 @@ The expansion must include: rhythm declaration, per-scene type + mood + depth la
 
 **edge-tts** uses Microsoft's online TTS service. Requires internet access.
 
-**Recommended passionate male voice:** `zh-CN-YunjianNeural` (Sports/Novel, Passion)
+**Recommended voice:** `zh-CN-YunyangNeural` (News, Professional) — clear, natural, no AI flavor
 
 **Other Chinese voices:**
-- `zh-CN-YunxiNeural` — Male, Novel, Lively/Sunshine; use only when Yunjian sounds too dramatic
+- `zh-CN-YunxiNeural` — Male, Novel, Lively/Sunshine; alternate when a slightly livelier tone is desired
 - `zh-CN-YunyangNeural` — Male, News, Professional
 - `zh-CN-XiaoxiaoNeural` — Female, News/Novel, Warm
 - `zh-CN-XiaoyiNeural` — Female, Cartoon/Novel, Lively
@@ -140,7 +148,7 @@ The expansion must include: rhythm declaration, per-scene type + mood + depth la
 ```bash
 pip install edge-tts
 
-edge-tts --voice zh-CN-YunjianNeural --rate=+15% --pitch=+3Hz \
+edge-tts --voice zh-CN-YunyangNeural --rate=+5% \
   -f .hyperframes/script.txt \
   --write-media assets/narration.mp3 \
   --write-subtitles assets/narration.srt
@@ -170,7 +178,7 @@ def parse_srt(filepath):
 
 Group SRT entries by script paragraphs for scene timing. With 3 key points per news item, you'll have roughly 3-5 SRT entries per news scene.
 
-**Captions must be 1:1 with SRT entries** — never manually split or estimate timings:
+**Captions must be 1:1 with SRT entries** — never manually split or estimate timings. Display text may differ from TTS wording (e.g. `AI小儿科` → `aixiaoerke.com`); timings stay 1:1 with SRT:
 ```bash
 node scripts/srt-to-captions.mjs assets/narration.srt compositions/caption-overlay.html
 ```
@@ -238,8 +246,9 @@ cp node_modules/gsap/dist/gsap.min.js assets/gsap.min.js
 Read values from `design.md`. Defaults in [design-template.md](references/design-template.md):
 
 - Background: `#0a0a1a`, Accent: `#00d4ff` / `#7c3aed`, Summary: `#b0b0cc`
-- Scene layout: `div.clip.scene` on track 1, `position:absolute; inset:0; 1920×1080; background:#0a0a1a` (**every `.scene` must set background — renderer default is white**)
-- Content: flexbox center, padding `80px 120px`, `overflow:hidden`, `word-break:break-word`
+- **Persistent `#bg-plate`** inside `#root` — `position:absolute; inset:0; background:#0a0a1a; z-index:0` (not a clip; prevents white flash when scene clips switch)
+- Scene layout: `div.clip.scene` on track 1, `position:absolute; inset:0; 1920×1080; background:#0a0a1a; z-index:1` (**every `.scene` must set background — renderer default is white**)
+- Content: flexbox column, align-items: flex-start, padding `80px 120px`, `overflow:hidden`, `word-break:break-word`
 - Depth layers: `.deco-grid` (background) → `.deco-glow` (mid, hue rotates) → content (foreground)
 - Persistent: `.progress-track` + `.progress-fill` on track 0
 - Counter: top-right `"快讯 N/10"`, 14px, cyan index
@@ -270,6 +279,52 @@ Read values from `design.md`. Defaults in [design-template.md](references/design
 ```
 
 **Layout before animation:** build the hero frame as static CSS first. Use flex on `.scene-content` — reserve `position:absolute` for decoratives only.
+
+**Left-aligned key points (重要):** Use these CSS rules to ensure the 1.2.3 numbered list is left-aligned, not centered. Each `.kp-item` uses flexbox with the number circle on the left and text filling remaining width.
+
+```css
+.scene-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 1580px;
+}
+.key-points {
+  text-align: left;
+  width: 100%;
+  max-width: 1100px;
+  margin: 16px 0 0 0;
+}
+.kp-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  margin-bottom: 18px;
+  width: 100%;
+}
+.kp-num {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0,212,255,0.12);
+  color: #00d4ff;
+  font-size: 18px;
+  font-weight: 700;
+}
+.kp-text {
+  font-size: 30px;
+  color: #e8e8f0;
+  line-height: 1.4;
+  flex: 1;
+  text-align: left;
+}
+```
+
 
 #### 7.3 GSAP Animation Rules
 
@@ -334,7 +389,7 @@ tl.set("#sX", { opacity: 0 }, sceneStart + sceneDur);
 | Headline | `y: 50 → 0` | `power3.out` | Smooth slide-up |
 | Summary | `y: 30 → 0` | `power2.out` | Stagger after headline |
 | Stat number | `y: 30, scale: 0.5 → 1` | `expo.out` | For Number/Stat Card |
-| **Key Point item** | **x: -35 → 0** | **`power3.out`** | **Smooth slide-in, staggered** |
+| **Key Point item** | **x: -35 → 0** | **`power3.out`** | **Smooth slide-in, staggered, left-aligned container** |
 | Deco glow | `scale: 1 → 1.08` + opacity pulse 0.12↔0.22 | `sine.inOut, 3s cycle` | Breathing glow over scene |
 | Scene fade-in | `opacity: 0 → 1` | — | 0.1s |
 | Scene fade-out | `opacity: 1 → 0` | `power2.in` | 0.3s before end |
@@ -364,9 +419,11 @@ tl.to("#s1", { opacity: 0, scale: 0.98, duration: TRANS, ease: "power2.inOut" },
 
 Add a persistent `#bg-plate { background: #0a0a1a }` behind all scenes. Do not add per-element exit tweens before crossfade.
 
+**Do not overlap scene clips on the same track** — HyperFrames lint rejects it. GSAP crossfade opacity handles the visual blend; `#bg-plate` covers the brief gap when clips mount/unmount.
+
 Chain clip `data-start` cumulatively — `data-start + data-duration` must equal next scene's `data-start`.
 
-#### 7.5 Karaoke Captions (Standard)
+#### 7.5 Karaoke Captions (Standard, natural pacing)
 
 Do **not** use per-scene static `.subtitle` bars. Use a dedicated caption overlay on **track 2**.
 
@@ -392,7 +449,7 @@ node scripts/srt-to-captions.mjs assets/narration.srt compositions/caption-overl
 
 Summary:
 - Parse SRT → caption groups (3-5 words / ~4-6 Chinese chars)
-- High-energy karaoke: active word `#00d4ff` + scale 1.1, read 0.55 opacity, unread 0.3
+- Karaoke (natural): active word `#00d4ff` + scale 1.08, read 0.5 opacity, unread 0.35
 - Emphasis words (brands, numbers, escalation phrases): scale 1.14 + `.emphasis`
 - `text-shadow` for readability — no opaque background bar
 - Hard kill after every group: `tl.set(groupEl, { opacity: 0, visibility: "hidden" }, group.end)`
@@ -468,7 +525,8 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 | Key points overflow | 3 bullets exceed scene height | Reduce font sizes, use `.kp-text { font-size: 28px }`, reduce padding |
 | Audio precedes scene | Narration starts before scene title/KPs appear | Use `int(srt_start)` not `int(prev_end) + 1` for scene `data-start` |
 | IDs missing for detail fetch | Can't get full content | Note IDs from `fetch-news.mjs` output; use `--json` flag for cleaner parsing |
-| Flat narration | Sounds like neutral news reading | Rewrite with hook + stakes + escalation; use `zh-CN-YunjianNeural --rate=+15% --pitch=+3Hz` |
+| Flat narration | Sounds like neutral news reading | Ensure natural flow without excessive drama; use `zh-CN-YunyangNeural --rate=+5%` |
+| Domain in TTS script | edge-tts spells `aixiaoerke.com` letter-by-letter | Closing script: `可访问AI小儿科`; captions/HTML: `aixiaoerke.com` |
 
 ### Content Refresh
 
@@ -477,7 +535,7 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 3. Update key points: `node scripts/extract-key-points.mjs --input .hyperframes/article-details.md --output .hyperframes/key-points.md --script`
 4. Fill in the 3 key points in `key-points.md` (read full content per article)
 5. Rewrite `.hyperframes/script.txt` and update `.hyperframes/expanded-prompt.md`
-6. TTS + SRT: `edge-tts --voice zh-CN-YunjianNeural --rate=+15% --pitch=+3Hz -f .hyperframes/script.txt --write-media assets/narration.mp3 --write-subtitles assets/narration.srt`
+6. TTS + SRT: `edge-tts --voice zh-CN-YunyangNeural --rate=+5% -f .hyperframes/script.txt --write-media assets/narration.mp3 --write-subtitles assets/narration.srt`
 7. Parse SRT → scene timing + caption groups
 8. Regenerate HTML (keep `design.md` unchanged for style consistency)
 9. Re-render: `npx hyperframes render --output ai-news-new.mp4`
