@@ -248,7 +248,7 @@ Read values from `design.md`. Defaults in [design-template.md](references/design
 - Background: `#0a0a1a`, Accent: `#00d4ff` / `#7c3aed`, Summary: `#b0b0cc`
 - **Persistent `#bg-plate`** inside `#root` — `position:absolute; inset:0; background:#0a0a1a; z-index:0` (not a clip; prevents white flash when scene clips switch)
 - Scene layout: `div.clip.scene` on track 1, `position:absolute; inset:0; 1920×1080; background:#0a0a1a; z-index:1` (**every `.scene` must set background — renderer default is white**)
-- Content: flexbox column, align-items: flex-start, padding `80px 120px`, `overflow:hidden`, `word-break:break-word`
+- Content: flexbox column, align-items: center, padding `80px 120px`, `overflow:hidden`, `word-break:break-word`
 - Depth layers: `.deco-grid` (background) → `.deco-glow` (mid, hue rotates) → content (foreground)
 - Persistent: `.progress-track` + `.progress-fill` on track 0
 - Counter: top-right `"快讯 N/10"`, 14px, cyan index
@@ -280,13 +280,13 @@ Read values from `design.md`. Defaults in [design-template.md](references/design
 
 **Layout before animation:** build the hero frame as static CSS first. Use flex on `.scene-content` — reserve `position:absolute` for decoratives only.
 
-**Left-aligned key points (重要):** Use these CSS rules to ensure the 1.2.3 numbered list is left-aligned, not centered. Each `.kp-item` uses flexbox with the number circle on the left and text filling remaining width.
+**Key points layout — overall centered, list left-aligned (重要):** Scene content (badge, headline) is centered as a whole. The 1.2.3 numbered list block is centered within the scene, but each list item inside is strictly left-aligned (number circle + text). Each `.kp-item` uses flexbox with the number circle on the left and text filling remaining width.
 
 ```css
 .scene-content {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   width: 100%;
   max-width: 1580px;
 }
@@ -294,7 +294,7 @@ Read values from `design.md`. Defaults in [design-template.md](references/design
   text-align: left;
   width: 100%;
   max-width: 1100px;
-  margin: 16px 0 0 0;
+  margin: 16px auto 0 auto;
 }
 .kp-item {
   display: flex;

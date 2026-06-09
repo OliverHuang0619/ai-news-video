@@ -219,14 +219,22 @@ Every video uses the same structural template. Only content and visual elements 
 
 ### Key Points Layout (Left-Aligned)
 
-All numbered key-point lists (1. 2. 3.) must be left-aligned, not centered. Add these CSS rules:
+Scene content (badge, headline) is centered. The 1.2.3 numbered list block is centered within the scene, but each list item is strictly left-aligned. Add these CSS rules:
 
 ```css
+.scene-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 1580px;
+  margin: 0 auto;
+}
 .key-points {
   text-align: left;
   width: 100%;
   max-width: 1100px;
-  margin: 16px 0 0 0;
+  margin: 16px auto 0 auto;
 }
 .kp-item {
   display: flex;

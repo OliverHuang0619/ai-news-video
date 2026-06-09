@@ -87,10 +87,11 @@ Headline + 3 animated bullet points extracted from the full article content. Thi
 </div>
 ```
 
-**Left-aligned layout:** All numbered key points must be left-aligned (not centered). Add these CSS rules:
+**Left-aligned layout:** Scene content is centered. The 1.2.3 numbered list block is centered within the scene, but each list item is strictly left-aligned. Add these CSS rules:
 
 ```css
-.key-points { text-align: left; width: 100%; max-width: 1100px; margin: 16px 0 0 0; }
+.scene-content { display: flex; flex-direction: column; align-items: center; width: 100%; max-width: 1580px; margin: 0 auto; }
+.key-points { text-align: left; width: 100%; max-width: 1100px; margin: 16px auto 0 auto; }
 .kp-item { display: flex; align-items: flex-start; gap: 18px; margin-bottom: 18px; width: 100%; }
 .kp-num { flex-shrink: 0; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: rgba(0,212,255,0.12); color: #00d4ff; font-size: 18px; font-weight: 700; }
 .kp-text { font-size: 30px; color: #e8e8f0; line-height: 1.4; flex: 1; text-align: left; }
