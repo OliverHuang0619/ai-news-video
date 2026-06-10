@@ -1,22 +1,22 @@
 #!/usr/bin/env node
 /**
- * generate-cover.mjs — Generate video cover image with all news items
+ * @ai-news-video
+ * generate-cover.mjs — Generate video cover image & scene HTML
  *
  * Reads .hyperframes/key-points.md for article data, optionally reads
- * design.md for palette overrides, generates a self-contained 1920×1080
- * HTML cover page, and screenshots it via playwright-cli.
+ * design.md for palette overrides. Two output modes:
+ *   (default) Generate cover PNG via playwright-cli screenshot
+ *   --scene   Generate a self-contained scene div for video composition
  *
  * Usage:
- *   node scripts/generate-cover.mjs --key-points .hyperframes/key-points.md
- *   node scripts/generate-cover.mjs --key-points .hyperframes/key-points.md --design design.md
- *   node scripts/generate-cover.mjs --key-points .hyperframes/key-points.md --date "2026.06.10"
- *   node scripts/generate-cover.mjs --output assets/cover.png
- *   node scripts/generate-cover.mjs --no-screenshot              # HTML only
+ *   node scripts/generate-cover.mjs                                   # PNG
+ *   node scripts/generate-cover.mjs --scene                           # Scene HTML
+ *   node scripts/generate-cover.mjs --scene --output assets/cover-scene.html
  *
  * Defaults:
  *   --key-points  .hyperframes/key-points.md
  *   --design      design.md (optional; uses palette defaults if not found)
- *   --output      assets/cover.png
+ *   --output      assets/cover.png (or assets/cover-scene.html with --scene)
  *   --date        auto-detected from article publish_time or falls back to today
  */
 
@@ -49,15 +49,28 @@ const LABEL_COLORS = {
   data: '#f43f5e',
 };
 
+function categoryLabel(cat) {
+  const map = {
+    product: '产品', industry: '行业', policy: '政策',
+    research: '研究', data: '数据', company: '公司', tool: '工具',
+  };
+  return map[cat] || cat || '资讯';
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 // ─── CLI args ────────────────────────────────────────────────────────
 function parseArgs() {
   const args = process.argv.slice(2);
   const opts = {
     keyPoints: resolve('.hyperframes/key-points.md'),
     design: 'design.md',
-    output: resolve('assets/cover.png'),
+    output: null,
     date: null,
     noScreenshot: false,
+    sceneHtml: false,
     help: false,
   };
   for (let i = 0; i < args.length; i++) {
@@ -67,9 +80,13 @@ function parseArgs() {
       case '--output':     opts.output = resolve(args[++i]); break;
       case '--date':       opts.date = args[++i]; break;
       case '--no-screenshot': opts.noScreenshot = true; break;
+      case '--scene':      opts.sceneHtml = true; break;
       case '--help':
       case '-h':           opts.help = true; break;
     }
+  }
+  if (!opts.output) {
+    opts.output = opts.sceneHtml ? resolve('assets/cover-scene.html') : resolve('assets/cover.png');
   }
   return opts;
 }
@@ -102,12 +119,8 @@ function parseKeyPoints(filePath) {
 
     const timeMatch = line.match(/publish_time["': ]+([\d-]+)/) || line.match(/- \*\*时间\*\*: (.+)/);
     if (timeMatch) { current.pubTime = timeMatch[1].trim(); }
-    // Skip further processing for known metadata lines
-    if (idMatch || catMatch || timeMatch) continue;
-
   }
   if (current) articles.push(current);
-
   return articles;
 }
 
@@ -116,7 +129,6 @@ function readPalette(designPath) {
   if (!designPath || !existsSync(designPath)) return { ...DEFAULT_PALETTE };
   const md = readFileSync(designPath, 'utf8');
   const p = { ...DEFAULT_PALETTE };
-  const hexRe = /#([0-9a-fA-F]{6})\b/g;
   const named = {
     Background: 'background',
     'Background alt': 'backgroundAlt',
@@ -139,31 +151,13 @@ function readPalette(designPath) {
   return p;
 }
 
-// ─── Generate cover HTML ─────────────────────────────────────────────
-function escapeHtml(s) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function categoryLabel(cat) {
-  const map = {
-    product: '产品',
-    industry: '行业',
-    policy: '政策',
-    research: '研究',
-    data: '数据',
-    company: '公司',
-    tool: '工具',
-  };
-  return map[cat] || cat || '资讯';
-}
-
+// ─── Generate cover PNG HTML ─────────────────────────────────────────
 function generateCoverHTML(articles, palette, dateStr) {
   const items = articles.map((a, i) => {
     const num = String(i + 1).padStart(2, '0');
     const cat = a.category || 'news';
     const catLabel = categoryLabel(cat);
     const accentColor = LABEL_COLORS[cat] || palette.accent;
-
     return `
     <div class="article-item" style="--accent: ${accentColor};">
       <div class="item-left">
@@ -195,125 +189,25 @@ function generateCoverHTML(articles, palette, dateStr) {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     position: relative;
   }
-
-  /* ── Background layers ── */
-  .bg-grid {
-    position: absolute; inset: 0;
-    background-image:
-      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-    background-size: 48px 48px;
-    z-index: 0;
-  }
-  .bg-glow {
-    position: absolute;
-    top: 50%; left: 50%;
-    width: 960px; height: 600px;
-    transform: translate(-50%, -50%);
-    background: radial-gradient(ellipse, ${palette.accent}08 0%, ${palette.accentPurple}04 40%, transparent 70%);
-    z-index: 1;
-    pointer-events: none;
-  }
-
-  /* ── Content ── */
-  .cover-content {
-    position: relative; z-index: 2;
-    display: flex; flex-direction: column; align-items: center;
-    width: 1400px; max-height: 1000px;
-    padding: 60px 40px;
-  }
-
-  /* ── Header ── */
-  .cover-header { text-align: center; margin-bottom: 36px; }
-  .cover-title {
-    font-size: 52px; font-weight: 800;
-    color: ${palette.primaryText};
-    letter-spacing: 6px;
-    text-shadow: 0 0 60px ${palette.accent}30;
-    line-height: 1.2;
-  }
-  .cover-date {
-    font-size: 20px; font-weight: 400;
-    color: ${palette.summaryText};
-    margin-top: 10px;
-    letter-spacing: 2px;
-  }
-  .cover-divider {
-    width: 200px; height: 2px;
-    background: linear-gradient(90deg, transparent, ${palette.accent}60, ${palette.accentPurple}60, transparent);
-    margin: 20px auto 0;
-  }
-
-  /* ── Article list ── */
-  .article-list {
-    width: 100%;
-    display: flex; flex-direction: column;
-    gap: 10px;
-    max-width: 1200px;
-  }
-  .article-item {
-    display: flex; align-items: stretch;
-    gap: 16px;
-    padding: 14px 20px;
-    border-radius: 8px;
-    background: ${palette.surfaceLight};
-    backdrop-filter: blur(4px);
-    transition: none;
-  }
-  .item-left {
-    display: flex; align-items: center; gap: 14px;
-    flex-shrink: 0;
-  }
-  .item-num {
-    font-size: 22px; font-weight: 700;
-    min-width: 32px; text-align: center;
-    line-height: 1;
-  }
-  .accent-bar {
-    width: 3px; height: 32px;
-    border-radius: 2px;
-    flex-shrink: 0;
-  }
-  .item-body {
-    display: flex; flex-direction: column;
-    justify-content: center;
-    min-width: 0;
-    gap: 4px;
-  }
-  .item-title {
-    font-size: 26px; font-weight: 600;
-    color: ${palette.primaryText};
-    line-height: 1.35;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .item-cat {
-    font-size: 12px; font-weight: 500;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    opacity: 0.7;
-  }
-
-  /* ── 10 items fits gracefully; fewer → more space ── */
-  .article-list:empty + .cover-footer { margin-top: 0; }
-
-  /* ── Footer ── */
-  .cover-footer {
-    text-align: center; margin-top: 28px;
-  }
-  .footer-divider {
-    width: 320px; height: 1px;
-    background: linear-gradient(90deg, transparent, ${palette.summaryText}40, transparent);
-    margin: 0 auto 14px;
-  }
-  .footer-domain {
-    font-size: 15px; font-weight: 500;
-    color: ${palette.summaryText};
-    letter-spacing: 3px;
-  }
-  .footer-accent {
-    color: ${palette.accent};
-    font-weight: 600;
-  }
+  .bg-grid { position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.03)1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03)1px,transparent 1px);background-size:48px 48px;z-index:0; }
+  .bg-glow { position:absolute;top:50%;left:50%;width:960px;height:600px;transform:translate(-50%,-50%);background:radial-gradient(ellipse,${palette.accent}08 0%,${palette.accentPurple}04 40%,transparent 70%);z-index:1;pointer-events:none; }
+  .cover-content { position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;width:1400px;max-height:1000px;padding:60px 40px; }
+  .cover-header { text-align:center;margin-bottom:36px; }
+  .cover-title { font-size:52px;font-weight:800;color:${palette.primaryText};letter-spacing:6px;text-shadow:0 0 60px ${palette.accent}30;line-height:1.2; }
+  .cover-date { font-size:20px;font-weight:400;color:${palette.summaryText};margin-top:10px;letter-spacing:2px; }
+  .cover-divider { width:200px;height:2px;background:linear-gradient(90deg,transparent,${palette.accent}60,${palette.accentPurple}60,transparent);margin:20px auto 0; }
+  .article-list { width:100%;display:flex;flex-direction:column;gap:10px;max-width:1200px; }
+  .article-item { display:flex;align-items:stretch;gap:16px;padding:14px 20px;border-radius:8px;background:${palette.surfaceLight};backdrop-filter:blur(4px); }
+  .item-left { display:flex;align-items:center;gap:14px;flex-shrink:0; }
+  .item-num { font-size:22px;font-weight:700;min-width:32px;text-align:center; }
+  .accent-bar { width:3px;height:32px;border-radius:2px;flex-shrink:0; }
+  .item-body { display:flex;flex-direction:column;justify-content:center;min-width:0;gap:4px; }
+  .item-title { font-size:26px;font-weight:600;color:${palette.primaryText};line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .item-cat { font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;opacity:0.7; }
+  .cover-footer { text-align:center;margin-top:28px; }
+  .footer-divider { width:320px;height:1px;background:linear-gradient(90deg,transparent,${palette.summaryText}40,transparent);margin:0 auto 14px; }
+  .footer-domain { font-size:15px;font-weight:500;color:${palette.summaryText};letter-spacing:3px; }
+  .footer-accent { color:${palette.accent};font-weight:600; }
 </style>
 </head>
 <body>
@@ -325,9 +219,7 @@ function generateCoverHTML(articles, palette, dateStr) {
       <div class="cover-date">${escapeHtml(dateStr)} · ${articles.length} 条速览</div>
       <div class="cover-divider"></div>
     </div>
-    <div class="article-list">
-      ${items}
-    </div>
+    <div class="article-list">${items}</div>
     <div class="cover-footer">
       <div class="footer-divider"></div>
       <div class="footer-domain"><span class="footer-accent">aixiaoerke</span>.com</div>
@@ -335,6 +227,48 @@ function generateCoverHTML(articles, palette, dateStr) {
   </div>
 </body>
 </html>`;
+}
+
+// ─── Generate cover scene HTML for video composition ────────────────
+function generateSceneHTML(articles, palette, dateStr, sceneId, sceneStart, sceneDur) {
+  const items = articles.map((a, i) => {
+    const num = String(i + 1).padStart(2, '0');
+    const cat = a.category || 'news';
+    const catLabel = categoryLabel(cat);
+    const accentColor = LABEL_COLORS[cat] || palette.accent;
+    return `
+    <div class="cv-item" style="display:flex;align-items:stretch;gap:12px;padding:10px 16px;border-radius:8px;background:rgba(255,255,255,0.05);">
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+        <span style="font-size:18px;font-weight:700;min-width:28px;text-align:center;color:${accentColor};">${num}</span>
+        <div style="width:3px;height:26px;border-radius:2px;flex-shrink:0;background:linear-gradient(to bottom,${accentColor},${palette.accentPurple});"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;justify-content:center;gap:2px;min-width:0;flex:1;">
+        <span style="font-size:22px;font-weight:600;color:${palette.primaryText};line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(a.title)}</span>
+        <span style="font-size:10px;font-weight:500;color:${accentColor};opacity:0.7;letter-spacing:1px;">${catLabel}</span>
+      </div>
+    </div>`;
+  }).join('\n');
+
+  return `\
+<!-- Scene: Cover — all ${articles.length} news items overview (auto-generated) -->
+<div id="s${sceneId}-cover" class="clip scene" data-track-index="1" data-start="${sceneStart}" data-duration="${sceneDur}" style="position:absolute;inset:0;background:${palette.background};z-index:1;overflow:hidden;">
+<div class="deco-grid" style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.03) 1px,transparent 1px);background-size:48px 48px;z-index:2;"></div>
+<div id="s${sceneId}-cover-glow" class="deco-glow" style="position:absolute;top:50%;left:50%;width:800px;height:500px;transform:translate(-50%,-50%);background:radial-gradient(ellipse,${palette.accent}10 0%,${palette.accentPurple}08 40%,transparent 70%);z-index:3;pointer-events:none;"></div>
+<div id="s${sceneId}-cover-content" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 80px;overflow:hidden;z-index:5;font-family:sans-serif;">
+  <div id="s${sceneId}-cover-header" style="text-align:center;margin-bottom:24px;">
+    <div id="s${sceneId}-cover-brand" style="font-size:44px;font-weight:800;color:#ffffff;letter-spacing:6px;text-shadow:0 0 60px ${palette.accent}40;line-height:1.2;">AI 资讯速递</div>
+    <div id="s${sceneId}-cover-date" style="font-size:16px;font-weight:400;color:#b0b0cc;margin-top:6px;letter-spacing:2px;">${escapeHtml(dateStr)} · ${articles.length} 条速览</div>
+    <div style="width:140px;height:2px;background:linear-gradient(90deg,transparent,${palette.accent}70,${palette.accentPurple}60,transparent);margin:12px auto 0;"></div>
+  </div>
+  <div id="s${sceneId}-cover-items" style="width:100%;max-width:1050px;display:flex;flex-direction:column;gap:6px;">
+    ${items}
+  </div>
+  <div id="s${sceneId}-cover-footer" style="text-align:center;margin-top:18px;">
+    <div style="width:240px;height:1px;background:linear-gradient(90deg,transparent,rgba(176,176,204,0.25),transparent);margin:0 auto 10px;"></div>
+    <div style="font-size:13px;font-weight:500;color:#b0b0cc;letter-spacing:3px;"><span style="color:${palette.accent};font-weight:600;">aixiaoerke</span>.com</div>
+  </div>
+</div>
+</div>`;
 }
 
 // ─── Screenshot via playwright-cli ────────────────────────────────────
@@ -350,7 +284,6 @@ function screenshotViaPlaywright(htmlPath, outputPath) {
   const absOutput = resolve(outputPath);
   mkdirSync(dirname(absOutput), { recursive: true });
 
-  // Playwright blocks file:// protocol; serve via a local HTTP server
   const htmlDir = dirname(htmlPath);
   const htmlFile = basename(htmlPath);
   const port = 9876;
@@ -361,8 +294,6 @@ function screenshotViaPlaywright(htmlPath, outputPath) {
       stdio: 'pipe', detached: true,
     });
     server.unref();
-
-    // Wait for server to start
     execSync('sleep 1.0', { stdio: 'inherit' });
 
     const url = 'http://127.0.0.1:' + port + '/' + htmlFile;
@@ -387,7 +318,10 @@ function screenshotViaPlaywright(htmlPath, outputPath) {
       setTimeout(function() { try { process.kill(-server.pid, 'SIGKILL'); } catch (e) {} }, 3000);
     }
   }
-}async function main() {
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────
+async function main() {
   const opts = parseArgs();
   if (opts.help) {
     const help = readFileSync(process.argv[1], 'utf8').split('\n').slice(2, 20).join('\n');
@@ -410,7 +344,6 @@ function screenshotViaPlaywright(htmlPath, outputPath) {
   // Determine date
   let dateStr = opts.date;
   if (!dateStr) {
-    // Try to extract date from article publish_time or use today
     const pubTimes = articles.filter(a => a.pubTime).map(a => a.pubTime);
     if (pubTimes.length > 0) {
       const d = new Date(pubTimes.sort().pop());
@@ -422,16 +355,30 @@ function screenshotViaPlaywright(htmlPath, outputPath) {
   }
   console.log(`📅 Date: ${dateStr}`);
 
-  // Generate HTML
+  // ---- Scene HTML mode ----
+  if (opts.sceneHtml) {
+    const sceneHtml = generateSceneHTML(articles, palette, dateStr, 0, 0, 5);
+    const outPath = resolve(opts.output);
+    mkdirSync(dirname(outPath), { recursive: true });
+    writeFileSync(outPath, sceneHtml, 'utf8');
+    console.log(`✅ Cover scene HTML → ${outPath}`);
+    return;
+  }
+
+  // ---- PNG cover mode ----
   const html = generateCoverHTML(articles, palette, dateStr);
   const htmlPath = resolve('/tmp/ai-news-cover.html');
   writeFileSync(htmlPath, html, 'utf8');
   console.log(`📄 Cover HTML → ${htmlPath}`);
 
-  // Screenshot
   if (opts.noScreenshot) {
     console.log('🔍 --no-screenshot: HTML only');
     console.log(`   Open: file://${htmlPath}`);
+    // Also write scene HTML
+    const sceneHtml = generateSceneHTML(articles, palette, dateStr, 0, 0, 5);
+    const scenePath = resolve(opts.output.replace(/\.png$/, '-scene.html'));
+    writeFileSync(scenePath, sceneHtml, 'utf8');
+    console.log(`📄 Cover scene HTML → ${scenePath}`);
     return;
   }
 
@@ -443,6 +390,12 @@ function screenshotViaPlaywright(htmlPath, outputPath) {
     console.log(`ℹ️  Cover HTML at file://${htmlPath}`);
     console.log(`   To generate manually: open in browser, screenshot at 1920×1080, save as ${opts.output}`);
   }
+
+  // Always write scene HTML alongside cover
+  const sceneHtml = generateSceneHTML(articles, palette, dateStr, 0, 0, 5);
+  const scenePath = resolve(dirname(opts.output), 'cover-scene.html');
+  writeFileSync(scenePath, sceneHtml, 'utf8');
+  console.log(`📄 Cover scene HTML → ${scenePath}`);
 }
 
 main().catch(err => { console.error('❌', err.message); process.exit(1); });

@@ -19,6 +19,8 @@ Turn AI news articles from aixiaoerke.com into short news briefings using HyperF
 8. **Parse SRT** for scene timing + caption groups
 9. **Build composition** — scenes on track 1, karaoke captions on track 2, audio on track 3
 10. **Generate video cover:** `node scripts/generate-cover.mjs`
+11. **Render cover into video:** `node scripts/generate-cover.mjs --scene`, insert cover scene as Scene 0 in index.html
+
 11. **Validate:** `npx hyperframes lint && npx hyperframes validate && npx hyperframes inspect --samples 10`
 12. **Render:** `npx hyperframes render --output output.mp4`
 
@@ -272,6 +274,38 @@ The script:
 **Output:** `assets/cover.png` — 1920×1080 PNG, ready for social media alongside the video.
 
 
+
+### 6.5.1 Render Cover Into Video (Scene 0)
+
+After generating the cover PNG, **also generate a cover scene HTML** that shows all news items as the first scene of the video. This gives viewers an overview of all content before the title card:
+
+```bash
+node scripts/generate-cover.mjs --scene 
+  --key-points .hyperframes/key-points.md 
+  --design design.md 
+  --output assets/cover-scene.html
+```
+
+The output is a self-contained `<div class="clip scene">` block showing:
+- **Brand + date** header at the top
+- **All 10+ news items** listed with numbered badges and category accent colors
+- **Footer** with `aixiaoerke.com`
+- Inline styles (no external dependencies)
+
+Insert this scene block as **Scene 0** (data-start="0", data-duration="5") at the beginning of `index.html`, before the title scene. Shift all existing scene `data-start` values and GSAP timeline times by +5 seconds. Also shift audio and captions tracks (`data-start="0"` → `data-start="5"`) so narration and captions begin after the cover scene ends. Reduce their `data-duration` from the original total to match the actual content length (audio length - 5s). The cover scene crossfades into the title scene.
+
+**Intro audio (optional but recommended):** Place a short intro sound effect at `assets/start.wav` (2s). Prepend it to the narration audio so the cover scene has audio:
+
+```bash
+# Concatenate intro WAV + narration MP3
+ffmpeg -i assets/start.wav -i assets/narration.mp3 \
+  -filter_complex "[0:a][1:a]concat=n=2:v=0:a=1[out]" \
+  -map "[out]" -ar 24000 -b:a 48k assets/narration-combined.mp3
+```
+
+Replace the narration source in `index.html` to use the combined file (`src="assets/narration-combined.mp3"`), set `data-start="0"`, and set cover scene `data-duration` to match the intro length (2s). Shift captions `data-start` to the same duration so narration syncs correctly.
+
+
 ### 7. Build Composition
 
 #### 7.1 Initialize Project
@@ -370,6 +404,18 @@ Read values from `design.md`. Defaults in [design-template.md](references/design
 
 
 #### 7.3 GSAP Animation Rules
+
+**Cover scene (Scene 0) animation for overview card:**
+
+```javascript
+// Cover scene items stagger in, then crossfade into title scene
+tl.from("#s0-cover-brand",   { y: -30, opacity: 0, duration: 0.6, ease: "power3.out" }, 0 + 0.2);
+tl.from("#s0-cover-date",    { y: -20, opacity: 0, duration: 0.4, ease: "power2.out" }, 0 + 0.5);
+tl.from("#s0-cover-items",   { opacity: 0, duration: 0.3 }, 0 + 0.8);
+// staggered item entrance (one per ~0.2s)
+tl.from(".cv-item",          { x: -40, opacity: 0, duration: 0.35, ease: "power2.out", stagger: 0.2 }, 0 + 0.8);
+```
+
 
 **Load GSAP locally, not from CDN:**
 ```html
@@ -543,6 +589,13 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 - [ ] Badge icon classes applied per scene type
 - [ ] Text fits without overflow
 - [ ] Video cover generated (`assets/cover.png`)
+- [ ] Cover scene inserted as Scene 0 in index.html (data-start="0", data-duration="5")
+- [ ] All existing scene starts shifted by +5s
+- [ ] GSAP timeline has cover animations (brand, date, items stagger)
+- [ ] Crossfade transition from Scene 0 to Scene 1
+- [ ] data-duration updated on progress bar and caption tracks
+- [ ] Audio track data-duration matches new total duration
+
 
 ### 9. Known Issues & Fixes
 
@@ -589,6 +642,8 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 8. Regenerate HTML (keep `design.md` unchanged for style consistency)
 9. Re-render: `npx hyperframes render --output ai-news-new.mp4`
 10. Regenerate cover: `node scripts/generate-cover.mjs --key-points .hyperframes/key-points.md --design design.md --output assets/cover.png`
+11. Regenerate cover scene: `node scripts/generate-cover.mjs --scene` and insert as Scene 0 into index.html
+
 
 ## References
 
@@ -598,7 +653,7 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 | [scripts/fetch-detail.mjs](scripts/fetch-detail.mjs) | Fetch full detail for selected articles by ID |
 | [scripts/extract-key-points.mjs](scripts/extract-key-points.mjs) | Structure article content for 3-key-point extraction |
 | [scripts/srt-to-captions.mjs](scripts/srt-to-captions.mjs) | Generate caption overlay from SRT |
-| [scripts/generate-cover.mjs](scripts/generate-cover.mjs) | Generate video cover image from article data and palette |
+| [scripts/generate-cover.mjs](scripts/generate-cover.mjs) | Generate video cover PNG (`--scene`) and scene HTML for video embedding |
 
 | [design-template.md](references/design-template.md) | Copy to `design.md` — palette, typography, motion |
 | [expanded-prompt-template.md](references/expanded-prompt-template.md) | Mandatory pre-build production plan |
