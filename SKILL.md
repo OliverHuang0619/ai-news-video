@@ -18,8 +18,9 @@ Turn AI news articles from aixiaoerke.com into short news briefings using HyperF
 7. **Generate audio** using `edge-tts` with `zh-CN-YunyangNeural`
 8. **Parse SRT** for scene timing + caption groups
 9. **Build composition** — scenes on track 1, karaoke captions on track 2, audio on track 3
-10. **Validate:** `npx hyperframes lint && npx hyperframes validate && npx hyperframes inspect --samples 10`
-11. **Render:** `npx hyperframes render --output output.mp4`
+10. **Generate video cover:** `node scripts/generate-cover.mjs`
+11. **Validate:** `npx hyperframes lint && npx hyperframes validate && npx hyperframes inspect --samples 10`
+12. **Render:** `npx hyperframes render --output output.mp4`
 
 ## Workflow
 
@@ -96,6 +97,7 @@ Write the script in `.hyperframes/script.txt`. Use pure Chinese text — no Engl
 ```
 
 **TTS vs on-screen brand (fixed rule):** Closing narration in `script.txt` always says **「可访问AI小儿科」** — edge-tts pronounces the Chinese brand name cleanly. **Subtitles and scene HTML** always show **`aixiaoerke.com`** (closing card URL, CTA copy). `srt-to-captions.mjs` maps `AI小儿科` → `aixiaoerke.com` in caption text automatically; do not put the domain in `script.txt`.
+
 
 | Layer | Closing site reference |
 |-------|------------------------|
@@ -181,6 +183,7 @@ Group SRT entries by script paragraphs for scene timing. With 3 key points per n
 **Captions must be 1:1 with SRT entries** — never manually split or estimate timings. Display text may differ from TTS wording (e.g. `AI小儿科` → `aixiaoerke.com`); timings stay 1:1 with SRT:
 ```bash
 node scripts/srt-to-captions.mjs assets/narration.srt compositions/caption-overlay.html
+
 ```
 Scene `start`/`end` in GSAP must use the same SRT boundaries (see section 7).
 
@@ -228,6 +231,46 @@ scene_durs = []
 for i in range(len(scene_starts) - 1):
     scene_durs.append(scene_starts[i + 1] - scene_starts[i])
 scene_durs.append(total_dur - scene_starts[-1])
+
+### 6.5 Generate Video Cover
+
+Every video gets a cover image showing all news items in an attractive layout. Generate it after the video is structured and before building the composition:
+
+```bash
+node scripts/generate-cover.mjs \
+  --key-points .hyperframes/key-points.md 
+  --design design.md 
+  --output assets/cover.png
+```
+
+The script:
+1. Reads `.hyperframes/key-points.md` — extracts article titles, IDs, and categories
+2. Reads `design.md` — picks up the video's color palette
+3. Generates a 1920×1080 self-contained HTML cover page
+4. Screenshots it via playwright-cli → `assets/cover.png`
+
+**Cover layout:**
+
+| Element | Description |
+|---------|-------------|
+| Brand | **AI 资讯速递** — 52px, weight 800, white, letter-spacing 6px |
+| Date | `2026.06.10 · N 条速览` — date auto-detected from articles or passed via `--date` |
+| Article list | Numbered items (01/02/...), each with accent-color left bar + title + category badge |
+| Footer | `aixiaoerke.com` — 15px, accent cyan |
+| Background | `#0a0a1a` with subtle grid pattern + radial glow |
+| Badge colors | `product`=cyan, `industry`=green, `policy`=amber, `research`=purple, `data`=rose |
+
+**Screenshot requirements:**
+- playwright-cli must be available (`npm install -g @playwright/cli@latest` or use the wrapper script at `$CODEX_HOME/skills/playwright/scripts/playwright_cli.sh`)
+- Or run with `--no-screenshot`, then open the HTML in a 1920×1080 browser and save as PNG
+
+**Auto-detects:**
+- Article publish dates for the date header (falls back to today's date)
+- Category from article metadata for badge accent colors
+- Design palette from `design.md` (uses defaults if not found)
+
+**Output:** `assets/cover.png` — 1920×1080 PNG, ready for social media alongside the video.
+
 
 ### 7. Build Composition
 
@@ -445,6 +488,7 @@ Full implementation: [caption-karaoke.md](references/caption-karaoke.md)
 Generate captions from SRT (never hand-write timings):
 ```bash
 node scripts/srt-to-captions.mjs assets/narration.srt compositions/caption-overlay.html
+
 ```
 
 Summary:
@@ -498,6 +542,7 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 - [ ] Rich visual elements used (data counter, ratio bars, quotes, timeline) when appropriate
 - [ ] Badge icon classes applied per scene type
 - [ ] Text fits without overflow
+- [ ] Video cover generated (`assets/cover.png`)
 
 ### 9. Known Issues & Fixes
 
@@ -518,6 +563,7 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 | All scenes in one container | Scenes never render | Each `.scene` is its own `clip` with timing attrs |
 | White text on white bg | Headlines invisible | `background:#0a0a1a` on every `.scene` + `text-shadow` on headlines |
 | Subtitles out of sync | Captions don't match audio | Run `srt-to-captions.mjs` — 1:1 with SRT, never manual splits |
+
 | White flash on cut | Blank frame between scenes | `#bg-plate` + overlapping crossfade, no slide-left |
 | Kokoro TTS garbled | Broken Chinese | Use edge-tts instead |
 | macOS `say` spells English | Letter-by-letter | Use edge-tts or Chinese equivalents |
@@ -527,6 +573,9 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 | IDs missing for detail fetch | Can't get full content | Note IDs from `fetch-news.mjs` output; use `--json` flag for cleaner parsing |
 | Flat narration | Sounds like neutral news reading | Ensure natural flow without excessive drama; use `zh-CN-YunyangNeural --rate=+5%` |
 | Domain in TTS script | edge-tts spells `aixiaoerke.com` letter-by-letter | Closing script: `可访问AI小儿科`; captions/HTML: `aixiaoerke.com` |
+| playwright-cli not found | Screenshot fails, HTML saved instead | `npm install -g @playwright/cli@latest` | open the HTML in browser at 1920×1080 and save as PNG |
+| Cover HTML text overflow | Long article titles clipped in list | Titles use `text-overflow: ellipsis` by default; reduce base font size if many items |
+
 
 ### Content Refresh
 
@@ -539,6 +588,7 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 7. Parse SRT → scene timing + caption groups
 8. Regenerate HTML (keep `design.md` unchanged for style consistency)
 9. Re-render: `npx hyperframes render --output ai-news-new.mp4`
+10. Regenerate cover: `node scripts/generate-cover.mjs --key-points .hyperframes/key-points.md --design design.md --output assets/cover.png`
 
 ## References
 
@@ -548,6 +598,8 @@ ls -la /tmp/frame.jpg  # should be > 30KB
 | [scripts/fetch-detail.mjs](scripts/fetch-detail.mjs) | Fetch full detail for selected articles by ID |
 | [scripts/extract-key-points.mjs](scripts/extract-key-points.mjs) | Structure article content for 3-key-point extraction |
 | [scripts/srt-to-captions.mjs](scripts/srt-to-captions.mjs) | Generate caption overlay from SRT |
+| [scripts/generate-cover.mjs](scripts/generate-cover.mjs) | Generate video cover image from article data and palette |
+
 | [design-template.md](references/design-template.md) | Copy to `design.md` — palette, typography, motion |
 | [expanded-prompt-template.md](references/expanded-prompt-template.md) | Mandatory pre-build production plan |
 | [caption-karaoke.md](references/caption-karaoke.md) | Karaoke subtitle overlay implementation |
