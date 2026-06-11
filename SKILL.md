@@ -294,16 +294,21 @@ The output is a self-contained `<div class="clip scene">` block showing:
 
 Insert this scene block as **Scene 0** (data-start="0", data-duration="5") at the beginning of `index.html`, before the title scene. Shift all existing scene `data-start` values and GSAP timeline times by +5 seconds. Also shift audio and captions tracks (`data-start="0"` → `data-start="5"`) so narration and captions begin after the cover scene ends. Reduce their `data-duration` from the original total to match the actual content length (audio length - 5s). The cover scene crossfades into the title scene.
 
-**Intro audio (optional but recommended):** Place a short intro sound effect at `assets/start.wav` (2s). Prepend it to the narration audio so the cover scene has audio:
+**Intro audio (required):** A 1.5-second intro sound effect is bundled at `assets/start.wav` in the skill directory. Copy it to the project and prepend it to the narration audio so the cover scene has audio:
 
 ```bash
+# Copy bundled intro sound from skill assets
+cp <skill-dir>/assets/start.wav assets/start.wav
+
 # Concatenate intro WAV + narration MP3
+INTRO_DUR=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 assets/start.wav)
 ffmpeg -i assets/start.wav -i assets/narration.mp3 \
   -filter_complex "[0:a][1:a]concat=n=2:v=0:a=1[out]" \
   -map "[out]" -ar 24000 -b:a 48k assets/narration-combined.mp3
+INTRO_SECS=$(printf "%.0f" "$INTRO_DUR")
 ```
 
-Replace the narration source in `index.html` to use the combined file (`src="assets/narration-combined.mp3"`), set `data-start="0"`, and set cover scene `data-duration` to match the intro length (2s). Shift captions `data-start` to the same duration so narration syncs correctly.
+Replace the narration source in `index.html` to use the combined file (`src="assets/narration-combined.mp3"`), set cover scene `data-duration` to match `INTRO_SECS`, and shift captions `data-start` by the same duration so narration syncs correctly.
 
 
 ### 7. Build Composition
